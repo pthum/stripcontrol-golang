@@ -22,6 +22,12 @@ type Config struct {
 		Port     string `yaml:"port" envconfig:"DB_PORT"`
 		DbName   string `yaml:"name" envconfig:"DB_NAME"`
 	} `yaml:"database"`
+	Messaging struct {
+		Host         string `yaml:"host" envconfig:"MQ_HOST"`
+		Port         string `yaml:"port" envconfig:"MQ_PORT"`
+		StripTopic   string `yaml:"striptopic" envconfig:"MQ_STRIPTOPIC"`
+		ProfileTopic string `yaml:"profiletopic" envconfig:"MQ_STRIPTOPIC"`
+	} `yaml:"messaging"`
 }
 
 // CONFIG the current configuration

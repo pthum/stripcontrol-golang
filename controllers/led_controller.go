@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/database"
+	"github.com/pthum/stripcontrol-golang/messaging"
 	"github.com/pthum/stripcontrol-golang/models"
 	"github.com/pthum/stripcontrol-golang/utils"
 )
@@ -52,6 +53,8 @@ func CreateLedStrip(c *gin.Context) {
 		return
 	}
 
+	var event = messaging.CreateStripEvent("SAVE", null.NewInt(0, false), input)
+	messaging.PublishStripEvent(event)
 	log.Printf("ID after save %d", input.ID)
 	c.Header("Location", fmt.Sprintf("%s/%d", c.Request.URL.String(), input.ID))
 	c.JSON(http.StatusCreated, input)
@@ -80,6 +83,9 @@ func UpdateLedStrip(c *gin.Context) {
 		return
 	}
 
+	var event = messaging.CreateStripEvent("SAVE", null.NewInt(input.ID, true), input)
+	messaging.PublishStripEvent(event)
+
 	c.JSON(http.StatusNoContent, nil)
 }
 
@@ -96,7 +102,8 @@ func DeleteLedStrip(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	var event = messaging.CreateDeleteStripEvent(null.NewInt(strip.ID, true))
+	messaging.PublishStripEvent(event)
 	c.JSON(http.StatusNoContent, nil)
 }
 
@@ -122,6 +129,10 @@ func UpdateProfileForStrip(c *gin.Context) {
 	}
 	strip.ProfileID = null.NewInt(profile.ID, true)
 	database.DB.Save(strip)
+
+	var event = messaging.CreateStripEvent("SAVE", null.NewInt(strip.ID, true), strip)
+	messaging.PublishStripEvent(event)
+
 	c.JSON(http.StatusOK, profile)
 }
 
@@ -142,6 +153,7 @@ func GetProfileForStrip(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err2.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, profile)
 }
 
@@ -155,4 +167,7 @@ func RemoveProfileForStrip(c *gin.Context) {
 	}
 	strip.ProfileID.Valid = false
 	database.DB.Save(strip)
+
+	var event = messaging.CreateStripEvent("SAVE", null.NewInt(strip.ID, true), strip)
+	messaging.PublishStripEvent(event)
 }
