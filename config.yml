@@ -1,0 +1,9 @@
+server:
+    port: 8080
+    mode: debug
+database:
+    user: postgres
+    pass: changeme
+    host: localhost
+    port: 5432
+    name: stripcontrol
