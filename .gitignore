@@ -15,3 +15,5 @@
 # vendor/
 static/
 .DS_Store
+.vscode/
+stripcontrol-golang
