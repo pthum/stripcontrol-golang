@@ -77,6 +77,20 @@ func Init() {
 	log.Print("initialized messaging")
 }
 
+// PublishStripSaveEvent publishes a strip save event
+func PublishStripSaveEvent(id null.Int, strip models.LedStrip) (err error) {
+	var event = createStripEvent(id, strip)
+	err = PublishStripEvent(event)
+	return
+}
+
+// PublishStripDeleteEvent publishes a strip save event
+func PublishStripDeleteEvent(id null.Int) (err error) {
+	var event = createDeleteStripEvent(id)
+	err = PublishStripEvent(event)
+	return
+}
+
 // PublishStripEvent publishes a strip event
 func PublishStripEvent(event StripEvent) (err error) {
 	err = publish(config.CONFIG.Messaging.StripTopic, event)
@@ -106,9 +120,9 @@ func PublishProfileEvent(event ProfileEvent) (err error) {
 }
 
 // CreateStripEvent creates a strip event
-func CreateStripEvent(typ string, id null.Int, strip models.LedStrip) (event StripEvent) {
+func createStripEvent(id null.Int, strip models.LedStrip) (event StripEvent) {
 	event = StripEvent{
-		Type: typ,
+		Type: "SAVE",
 		ID:   id,
 	}
 	event.Strip.Valid = true
@@ -128,7 +142,7 @@ func CreateStripEvent(typ string, id null.Int, strip models.LedStrip) (event Str
 }
 
 // CreateDeleteStripEvent creates a strip event
-func CreateDeleteStripEvent(id null.Int) (event StripEvent) {
+func createDeleteStripEvent(id null.Int) (event StripEvent) {
 	event = StripEvent{
 		Type: "DELETE",
 		ID:   id,

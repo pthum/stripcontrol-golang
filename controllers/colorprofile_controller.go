@@ -11,6 +11,10 @@ import (
 	"github.com/pthum/stripcontrol-golang/utils"
 )
 
+const (
+	profileNotFoundMsg = "Profile not found!"
+)
+
 // GetAllColorProfiles get all color profiles
 func GetAllColorProfiles(c *gin.Context) {
 	var profiles []models.ColorProfile
@@ -24,7 +28,7 @@ func GetColorProfile(c *gin.Context) {
 	// Get model if exist
 	var profile, err = database.GetColorProfile(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found!"})
+		c.JSON(http.StatusNotFound, gin.H{"error": profileNotFoundMsg})
 		return
 	}
 	c.JSON(http.StatusOK, profile)
@@ -55,7 +59,7 @@ func UpdateColorProfile(c *gin.Context) {
 	// Get model if exist
 	var profile, err = database.GetColorProfile(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found!"})
+		c.JSON(http.StatusNotFound, gin.H{"error": profileNotFoundMsg})
 		return
 	}
 
@@ -77,7 +81,7 @@ func DeleteColorProfile(c *gin.Context) {
 	// Get model if exist
 	var profile, err = database.GetColorProfile(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found!"})
+		c.JSON(http.StatusNotFound, gin.H{"error": profileNotFoundMsg})
 		return
 	}
 	if err := database.DB.Delete(&profile).Error; err != nil {

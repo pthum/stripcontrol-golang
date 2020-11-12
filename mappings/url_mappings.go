@@ -15,22 +15,44 @@ func CreateURLMappings() {
 	//Router.Use(controllers.Cors())
 	api := Router.Group("/api")
 	{
-		api.POST("/ledstrip", controllers.CreateLedStrip)
-		api.GET("/ledstrip", controllers.GetAllLedStrips)
-		api.GET("/ledstrip/:id", controllers.GetLedStrip)
-		api.PUT("/ledstrip/:id", controllers.UpdateLedStrip)
-		api.DELETE("/ledstrip/:id", controllers.DeleteLedStrip)
+		// mappings for /api/ledstrip
+		stripAPI := api.Group("/ledstrip")
+		{
+			stripAPI.POST("", controllers.CreateLedStrip)
+			stripAPI.GET("", controllers.GetAllLedStrips)
 
-		api.GET("/ledstrip/:id/profile", controllers.GetProfileForStrip)
-		api.PUT("/ledstrip/:id/profile", controllers.UpdateProfileForStrip)
-		api.DELETE("/ledstrip/:id/profile", controllers.RemoveProfileForStrip)
+			// mappings for /api/ledstrip/:id
+			stripIDAPI := stripAPI.Group("/:id")
+			{
+				stripIDAPI.GET("", controllers.GetLedStrip)
+				stripIDAPI.PUT("", controllers.UpdateLedStrip)
+				stripIDAPI.DELETE("", controllers.DeleteLedStrip)
 
-		api.POST("/colorprofile", controllers.CreateColorProfile)
-		api.GET("/colorprofile/:id", controllers.GetColorProfile)
-		api.GET("/colorprofile", controllers.GetAllColorProfiles)
-		api.PUT("/colorprofile/:id", controllers.UpdateColorProfile)
-		api.DELETE("/colorprofile/:id", controllers.DeleteColorProfile)
+				// mappings for /api/ledstrip/:id/profile
+				stripIDProfileAPI := stripIDAPI.Group("/profile")
+				{
+					stripIDProfileAPI.GET("", controllers.GetProfileForStrip)
+					stripIDProfileAPI.PUT("", controllers.UpdateProfileForStrip)
+					stripIDProfileAPI.DELETE("", controllers.RemoveProfileForStrip)
+				}
+			}
+		}
+		// mappings for /api/colorprofile
+		profileAPI := api.Group("/colorprofile")
+		{
+			profileAPI.POST("", controllers.CreateColorProfile)
+			profileAPI.GET("", controllers.GetAllColorProfiles)
+
+			// mappings for /api/colorprofile/:id
+			profileIDAPI := profileAPI.Group("/:id")
+			{
+				profileIDAPI.GET("", controllers.GetColorProfile)
+				profileIDAPI.PUT("", controllers.UpdateColorProfile)
+				profileIDAPI.DELETE("", controllers.DeleteColorProfile)
+			}
+		}
 	}
+	// static content
 	Router.StaticFile("/", "./static/index.html")
 	Router.StaticFile("/favicon.ico", "./static/favicon.ico")
 	Router.Static("/static", "./static/static")

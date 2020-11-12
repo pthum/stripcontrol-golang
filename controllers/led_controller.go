@@ -14,6 +14,10 @@ import (
 	"github.com/pthum/stripcontrol-golang/utils"
 )
 
+const (
+	stripNotFoundMsg = "LEDStrip not found!"
+)
+
 // GetAllLedStrips get all existing led strips
 func GetAllLedStrips(c *gin.Context) {
 	var strips, err = database.GetAllLedStrips()
@@ -30,7 +34,7 @@ func GetLedStrip(c *gin.Context) {
 	// Get model if exist
 	var strip, err = database.GetLedStrip(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Record not found!"})
+		c.JSON(http.StatusNotFound, gin.H{"error": stripNotFoundMsg})
 		return
 	}
 	c.JSON(http.StatusOK, strip)
@@ -53,8 +57,7 @@ func CreateLedStrip(c *gin.Context) {
 		return
 	}
 
-	var event = messaging.CreateStripEvent("SAVE", null.NewInt(0, false), input)
-	messaging.PublishStripEvent(event)
+	go messaging.PublishStripSaveEvent(null.NewInt(0, false), input)
 	log.Printf("ID after save %d", input.ID)
 	c.Header("Location", fmt.Sprintf("%s/%d", c.Request.URL.String(), input.ID))
 	c.JSON(http.StatusCreated, input)
@@ -65,7 +68,7 @@ func UpdateLedStrip(c *gin.Context) {
 	// Get model if exist
 	var strip, err = database.GetLedStrip(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Record not found!"})
+		c.JSON(http.StatusNotFound, gin.H{"error": stripNotFoundMsg})
 		return
 	}
 
@@ -83,8 +86,7 @@ func UpdateLedStrip(c *gin.Context) {
 		return
 	}
 
-	var event = messaging.CreateStripEvent("SAVE", null.NewInt(input.ID, true), input)
-	messaging.PublishStripEvent(event)
+	go messaging.PublishStripSaveEvent(null.NewInt(input.ID, true), input)
 
 	c.JSON(http.StatusNoContent, nil)
 }
@@ -94,7 +96,7 @@ func DeleteLedStrip(c *gin.Context) {
 	// Get model if exist
 	var strip, err = database.GetLedStrip(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Record not found!"})
+		c.JSON(http.StatusNotFound, gin.H{"error": stripNotFoundMsg})
 		return
 	}
 
@@ -102,8 +104,7 @@ func DeleteLedStrip(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	var event = messaging.CreateDeleteStripEvent(null.NewInt(strip.ID, true))
-	messaging.PublishStripEvent(event)
+	go messaging.PublishStripDeleteEvent(null.NewInt(strip.ID, true))
 	c.JSON(http.StatusNoContent, nil)
 }
 
@@ -130,8 +131,7 @@ func UpdateProfileForStrip(c *gin.Context) {
 	strip.ProfileID = null.NewInt(profile.ID, true)
 	database.DB.Save(strip)
 
-	var event = messaging.CreateStripEvent("SAVE", null.NewInt(strip.ID, true), strip)
-	messaging.PublishStripEvent(event)
+	go messaging.PublishStripSaveEvent(null.NewInt(strip.ID, true), strip)
 
 	c.JSON(http.StatusOK, profile)
 }
@@ -168,6 +168,7 @@ func RemoveProfileForStrip(c *gin.Context) {
 	strip.ProfileID.Valid = false
 	database.DB.Save(strip)
 
-	var event = messaging.CreateStripEvent("SAVE", null.NewInt(strip.ID, true), strip)
-	messaging.PublishStripEvent(event)
+	go messaging.PublishStripSaveEvent(null.NewInt(strip.ID, true), strip)
+
+	c.JSON(http.StatusNoContent, nil)
 }
