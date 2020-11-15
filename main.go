@@ -13,11 +13,10 @@ import (
 
 func main() {
 	config.InitConfig()
-	// set release mode if set
-	if config.CONFIG.Server.Mode == "release" {
-		// gin.SetMode(gin.ReleaseMode)
-	}
-	router := mappings.NewRouter()
+
+	var enableDebug = config.CONFIG.Server.Mode != "release"
+
+	router := mappings.NewRouter(enableDebug)
 	messaging.Init()
 	database.ConnectDataBase()
 	// Listen and serve on 0.0.0.0:8080

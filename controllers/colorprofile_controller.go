@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/database"
+	"github.com/pthum/stripcontrol-golang/messaging"
 	"github.com/pthum/stripcontrol-golang/models"
 	"github.com/pthum/stripcontrol-golang/utils"
 )
@@ -69,7 +71,11 @@ func UpdateColorProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	database.DB.Model(&profile).Updates(input)
+	if err := database.DB.Save(&input).Error; err != nil {
+		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		return
+	}
+	go messaging.PublishProfileSaveEvent(null.NewInt(input.ID, true), input)
 
 	HandleJSON(&w, http.StatusOK, profile)
 }
@@ -87,5 +93,6 @@ func DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	go messaging.PublishProfileDeleteEvent(null.NewInt(profile.ID, true))
 	HandleJSON(&w, http.StatusNoContent, nil)
 }

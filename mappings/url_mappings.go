@@ -9,6 +9,14 @@ import (
 	"github.com/pthum/stripcontrol-golang/controllers"
 )
 
+const (
+	profilePath           = "/api/colorprofile"
+	profileIDPath         = "/api/colorprofile/{id}"
+	ledstripPath          = "/api/ledstrip"
+	ledstripIDPath        = "/api/ledstrip/{id}"
+	ledstripIDProfilePath = "/api/ledstrip/{id}/profile"
+)
+
 // Route a route definition
 type Route struct {
 	Name        string
@@ -21,12 +29,14 @@ type Route struct {
 type Routes []Route
 
 // NewRouter initializes a new router, setup with all routes
-func NewRouter() *mux.Router {
+func NewRouter(enableDebug bool) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {
 		var handler http.Handler
 		handler = route.HandlerFunc
-		handler = RequestLogger(handler, route.Name)
+		if enableDebug {
+			handler = RequestLogger(handler)
+		}
 
 		router.
 			Methods(route.Method).
@@ -35,27 +45,25 @@ func NewRouter() *mux.Router {
 			Handler(handler)
 	}
 	// initialize static data
-	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static"))))
+	var handler http.Handler
+	handler = http.StripPrefix("/", http.FileServer(http.Dir("static")))
+	if enableDebug {
+		handler = RequestLogger(handler)
+	}
+
+	router.PathPrefix("/").Handler(handler)
 
 	return router
 }
 
-const (
-	profilePath           = "/api/colorprofile"
-	profileIDPath         = "/api/colorprofile/{id}"
-	ledstripPath          = "/api/ledstrip"
-	ledstripIDPath        = "/api/ledstrip/{id}"
-	ledstripIDProfilePath = "/api/ledstrip/{id}/profile"
-)
-
 // RequestLogger logs the request and duration
-func RequestLogger(inner http.Handler, name string) http.Handler {
+func RequestLogger(inner http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		inner.ServeHTTP(w, r)
 
-		log.Printf("[ %s ] %s \"%s\" %s", r.Method, r.RequestURI, name, time.Since(start))
+		log.Printf("[ %s ] %s %s", r.Method, r.RequestURI, time.Since(start))
 	})
 }
 

@@ -113,8 +113,22 @@ func publish(topic string, event interface{}) (err error) {
 	return
 }
 
+// PublishProfileSaveEvent publishes a profile save event
+func PublishProfileSaveEvent(id null.Int, profile models.ColorProfile) (err error) {
+	var event = createProfileEvent(id, profile)
+	err = publishProfileEvent(event)
+	return
+}
+
+// PublishProfileDeleteEvent publishes a profile delete event
+func PublishProfileDeleteEvent(id null.Int) (err error) {
+	var event = createDeleteProfileEvent(id)
+	err = publishProfileEvent(event)
+	return
+}
+
 // PublishProfileEvent publishes a profile event
-func PublishProfileEvent(event ProfileEvent) (err error) {
+func publishProfileEvent(event ProfileEvent) (err error) {
 	err = publish(config.CONFIG.Messaging.ProfileTopic, event)
 	return
 }
@@ -141,7 +155,7 @@ func createStripEvent(id null.Int, strip models.LedStrip) (event StripEvent) {
 	return
 }
 
-// CreateDeleteStripEvent creates a strip event
+// createDeleteStripEvent creates a strip event
 func createDeleteStripEvent(id null.Int) (event StripEvent) {
 	event = StripEvent{
 		Type: "DELETE",
@@ -151,14 +165,24 @@ func createDeleteStripEvent(id null.Int) (event StripEvent) {
 	return
 }
 
-// CreateProfileEvent creates a profile event
-func CreateProfileEvent(typ string, id null.Int, profile models.ColorProfile) (event ProfileEvent) {
+// createProfileEvent creates a profile event
+func createProfileEvent(id null.Int, profile models.ColorProfile) (event ProfileEvent) {
 	event = ProfileEvent{
-		Type: typ,
+		Type: "SAVE",
 		ID:   id,
 	}
 	event.State.Profile = profile
 	event.State.Valid = true
+	return
+}
+
+// createDeleteProfileEvent creates a strip event
+func createDeleteProfileEvent(id null.Int) (event ProfileEvent) {
+	event = ProfileEvent{
+		Type: "DELETE",
+		ID:   id,
+	}
+	event.State.Valid = false
 	return
 }
 
