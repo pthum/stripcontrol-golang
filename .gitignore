@@ -17,3 +17,4 @@ static/
 .DS_Store
 .vscode/
 stripcontrol-golang
+.scannerwork
