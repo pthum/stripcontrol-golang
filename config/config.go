@@ -16,6 +16,7 @@ type Config struct {
 		Mode string `yaml:"mode" envconfig:"SERVER_MODE"`
 	} `yaml:"server"`
 	Database struct {
+		Type     string `yaml:"type" envconfig:"DB_TYPE"`
 		Username string `yaml:"user" envconfig:"DB_USERNAME"`
 		Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
 		Host     string `yaml:"host" envconfig:"DB_HOST"`

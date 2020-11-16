@@ -2,9 +2,10 @@ server:
     port: 8080
     mode: debug
 database:
-    user: postgres
-    pass: changeme
-    host: localhost
+    type: sqlite
+    user: sa
+    pass: password
+    host: stripcontrol.sqlite
     port: 5432
     name: stripcontrol
 messaging:
