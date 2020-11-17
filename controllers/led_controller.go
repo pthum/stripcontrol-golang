@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 
 	"github.com/pthum/null"
@@ -79,12 +80,12 @@ func UpdateLedStrip(w http.ResponseWriter, r *http.Request) {
 	}
 	// profile shouldn't be updated through this endpoint
 	input.ProfileID = strip.ProfileID
-
-	if err := database.DB.Save(&input).Error; err != nil {
+	// calculate the difference, as gorm seem to update too much fields
+	fields := partialUpdate(strip, input)
+	if err := database.DB.Model(&strip).Debug().Select(fields).Updates(input).Error; err != nil {
 		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
 		return
 	}
-
 	go messaging.PublishStripSaveEvent(null.NewInt(input.ID, true), input)
 
 	HandleJSON(&w, http.StatusNoContent, nil)
@@ -170,4 +171,27 @@ func RemoveProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	go messaging.PublishStripSaveEvent(null.NewInt(strip.ID, true), strip)
 
 	HandleJSON(&w, http.StatusNoContent, nil)
+}
+
+func partialUpdate(dbObject interface{}, input interface{}) (fields []string) {
+	tIn := reflect.TypeOf(input)
+	tDb := reflect.TypeOf(dbObject)
+	if tIn.Kind() != tDb.Kind() || tIn != tDb {
+		log.Println("different kinds no update")
+		return
+	}
+	valIn := reflect.ValueOf(input)
+	valDb := reflect.ValueOf(dbObject)
+
+	for i := 0; i < valIn.NumField(); i++ {
+		valueFieldIn := valIn.Field(i)
+		valueFieldDb := valDb.Field(i)
+		typeField := valIn.Type().Field(i)
+		if valueFieldIn.Interface() != valueFieldDb.Interface() {
+			fields = append(fields, typeField.Name)
+		}
+	}
+
+	fmt.Printf("Fields to update: %v\n", fields)
+	return
 }
