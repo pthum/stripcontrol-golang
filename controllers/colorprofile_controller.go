@@ -18,8 +18,11 @@ const (
 
 // GetAllColorProfiles get all color profiles
 func GetAllColorProfiles(w http.ResponseWriter, r *http.Request) {
-	var profiles []models.ColorProfile
-	database.DB.Find(&profiles)
+	var profiles, err = database.GetAllColorProfiles()
+	if err != nil {
+		HandleError(&w, http.StatusNotFound, err.Error())
+		return
+	}
 
 	HandleJSON(&w, http.StatusOK, profiles)
 }
@@ -29,7 +32,7 @@ func GetColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var profile, err = database.GetColorProfile(GetParam(r, "id"))
 	if err != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": profileNotFoundMsg})
+		HandleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
 	}
 	HandleJSON(&w, http.StatusOK, profile)
@@ -40,7 +43,7 @@ func CreateColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input models.ColorProfile
 	if err := BindJSON(r, &input); err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -48,7 +51,7 @@ func CreateColorProfile(w http.ResponseWriter, r *http.Request) {
 	input.ID = utils.GenerateID()
 	if err := database.DB.Create(&input).Error; err != nil {
 		log.Printf("Error: %s", err)
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.Header().Add("Location", fmt.Sprintf("%s/%d", r.RequestURI, input.ID))
@@ -60,21 +63,21 @@ func UpdateColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var profile, err = database.GetColorProfile(GetParam(r, "id"))
 	if err != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": profileNotFoundMsg})
+		HandleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
 	}
 
 	// Validate input
 	var input models.ColorProfile
 	if err := BindJSON(r, &input); err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := database.UpdateProfile(profile, input); err != nil {
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := database.DB.Save(&input).Error; err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
-		return
-	}
 	go messaging.PublishProfileSaveEvent(null.NewInt(input.ID, true), input)
 
 	HandleJSON(&w, http.StatusOK, profile)
@@ -85,11 +88,11 @@ func DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var profile, err = database.GetColorProfile(GetParam(r, "id"))
 	if err != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": profileNotFoundMsg})
+		HandleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
 	}
 	if err := database.DB.Delete(&profile).Error; err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 

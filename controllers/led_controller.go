@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"reflect"
 	"strconv"
 
 	"github.com/pthum/null"
@@ -22,7 +21,7 @@ const (
 func GetAllLedStrips(w http.ResponseWriter, r *http.Request) {
 	var strips, err = database.GetAllLedStrips()
 	if err != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": err.Error()})
+		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -34,7 +33,7 @@ func GetLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip, err = database.GetLedStrip(GetParam(r, "id"))
 	if err != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": stripNotFoundMsg})
+		HandleError(&w, http.StatusNotFound, stripNotFoundMsg)
 		return
 	}
 	HandleJSON(&w, http.StatusOK, strip)
@@ -45,7 +44,7 @@ func CreateLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input models.LedStrip
 	if err := BindJSON(r, &input); err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 	// generate an id
@@ -53,7 +52,7 @@ func CreateLedStrip(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Generated ID %d", input.ID)
 	if err := database.DB.Create(&input).Error; err != nil {
 		log.Printf("Error: %s", err)
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -68,25 +67,22 @@ func UpdateLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip, err = database.GetLedStrip(GetParam(r, "id"))
 	if err != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": stripNotFoundMsg})
+		HandleError(&w, http.StatusNotFound, stripNotFoundMsg)
 		return
 	}
 
 	// Validate input
 	var input models.LedStrip
 	if err := BindJSON(r, &input); err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// profile shouldn't be updated through this endpoint
-	input.ProfileID = strip.ProfileID
-	// calculate the difference, as gorm seem to update too much fields
-	fields := partialUpdate(strip, input)
-	if err := database.DB.Model(&strip).Debug().Select(fields).Updates(input).Error; err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
-		return
-	}
-	go messaging.PublishStripSaveEvent(null.NewInt(input.ID, true), input)
+	// run db update for strip async, as precondition checks were successful,
+	// chances are good that the update will be successful
+	// if the db update fails, the hardware won't change (no message sent)
+	// in that case the UI would not reflect the current state,
+	// which we accept for now
+	go updateAndHandle(strip, input)
 
 	HandleJSON(&w, http.StatusNoContent, nil)
 }
@@ -96,12 +92,12 @@ func DeleteLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip, err = database.GetLedStrip(GetParam(r, "id"))
 	if err != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": stripNotFoundMsg})
+		HandleError(&w, http.StatusNotFound, stripNotFoundMsg)
 		return
 	}
 
 	if err := database.DB.Delete(&strip).Error; err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 	go messaging.PublishStripDeleteEvent(null.NewInt(strip.ID, true))
@@ -113,19 +109,19 @@ func UpdateProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip, err1 = database.GetLedStrip(GetParam(r, "id"))
 	if err1 != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": err1.Error()})
+		HandleError(&w, http.StatusBadRequest, err1.Error())
 		return
 	}
 
 	// Validate input
 	var input models.ColorProfile
 	if err := BindJSON(r, &input); err != nil {
-		HandleJSON(&w, http.StatusBadRequest, H{"error": err.Error()})
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 	var profile, err2 = database.GetColorProfile(strconv.FormatInt(input.ID, 10))
 	if err2 != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": err2.Error()})
+		HandleError(&w, http.StatusBadRequest, err2.Error())
 		return
 	}
 	strip.ProfileID = null.NewInt(profile.ID, true)
@@ -141,16 +137,16 @@ func GetProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip, err1 = database.GetLedStrip(GetParam(r, "id"))
 	if err1 != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": err1.Error()})
+		HandleError(&w, http.StatusBadRequest, err1.Error())
 		return
 	}
 	if !strip.ProfileID.Valid {
-		HandleJSON(&w, http.StatusNotFound, H{"error": "Record not found!"})
+		HandleError(&w, http.StatusBadRequest, "Profile not found!")
 		return
 	}
 	var profile, err2 = database.GetColorProfile(strconv.FormatInt(strip.ProfileID.Int64, 10))
 	if err2 != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": err2.Error()})
+		HandleError(&w, http.StatusBadRequest, err2.Error())
 		return
 	}
 
@@ -162,7 +158,7 @@ func RemoveProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip, err1 = database.GetLedStrip(GetParam(r, "id"))
 	if err1 != nil {
-		HandleJSON(&w, http.StatusNotFound, H{"error": err1.Error()})
+		HandleError(&w, http.StatusBadRequest, err1.Error())
 		return
 	}
 	strip.ProfileID.Valid = false
@@ -173,25 +169,13 @@ func RemoveProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	HandleJSON(&w, http.StatusNoContent, nil)
 }
 
-func partialUpdate(dbObject interface{}, input interface{}) (fields []string) {
-	tIn := reflect.TypeOf(input)
-	tDb := reflect.TypeOf(dbObject)
-	if tIn.Kind() != tDb.Kind() || tIn != tDb {
-		log.Println("different kinds no update")
+func updateAndHandle(strip models.LedStrip, input models.LedStrip) {
+	// profile shouldn't be updated through this endpoint
+	input.ProfileID = strip.ProfileID
+
+	if err := database.UpdateStrip(strip, input); err != nil {
+		log.Printf("error: %s", err.Error())
 		return
 	}
-	valIn := reflect.ValueOf(input)
-	valDb := reflect.ValueOf(dbObject)
-
-	for i := 0; i < valIn.NumField(); i++ {
-		valueFieldIn := valIn.Field(i)
-		valueFieldDb := valDb.Field(i)
-		typeField := valIn.Type().Field(i)
-		if valueFieldIn.Interface() != valueFieldDb.Interface() {
-			fields = append(fields, typeField.Name)
-		}
-	}
-
-	fmt.Printf("Fields to update: %v\n", fields)
-	return
+	messaging.PublishStripSaveEvent(null.NewInt(input.ID, true), input)
 }

@@ -24,6 +24,11 @@ func GetParam(r *http.Request, param string) (paramValue string) {
 	return
 }
 
+// HandleError handles an error
+func HandleError(w *http.ResponseWriter, status int, message string) {
+	HandleJSON(w, http.StatusNotFound, H{"error": message})
+}
+
 // HandleJSON handle json
 func HandleJSON(w *http.ResponseWriter, status int, result interface{}) {
 	writer := *w
