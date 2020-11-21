@@ -77,6 +77,12 @@ func Init() {
 	log.Print("initialized messaging")
 }
 
+// Close closes connections to message broker
+func Close() {
+	mqclient.Disconnect(100)
+	log.Print("message broker connection gracefully closed")
+}
+
 // PublishStripSaveEvent publishes a strip save event
 func PublishStripSaveEvent(id null.Int, strip models.LedStrip) (err error) {
 	var event = createStripEvent(id, strip)

@@ -27,3 +27,17 @@ func ConnectDataBase() {
 
 	DB = db
 }
+
+// CloseDB closing db
+func CloseDB() {
+	// Get generic database object sql.DB to be able to close
+	sqlDB, err := DB.DB()
+	if err != nil {
+		log.Printf("err closing db connection: %s", err.Error())
+	}
+	if err = sqlDB.Close(); err != nil {
+		log.Printf("err closing db connection: %s", err.Error())
+	} else {
+		log.Println("db connection gracefully closed")
+	}
+}
