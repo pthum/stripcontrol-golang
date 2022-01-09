@@ -8,6 +8,17 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Route a route definition
+type Route struct {
+	Name        string
+	Method      string
+	Pattern     string
+	HandlerFunc http.HandlerFunc
+}
+
+// Routes a route array definition
+type Routes []Route
+
 // Common handler methods
 
 // BindJSON bind the response body to the object
