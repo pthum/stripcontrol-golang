@@ -62,6 +62,9 @@ var (
 
 // Init initialize messaging
 func Init() {
+	if config.CONFIG.Messaging.Disabled {
+		return
+	}
 	//create a ClientOptions struct setting the broker address, clientid, turn
 	//off trace output and set the default message handler
 	configString := fmt.Sprintf("tcp://%s:%s", config.CONFIG.Messaging.Host, config.CONFIG.Messaging.Port)
@@ -79,6 +82,9 @@ func Init() {
 
 // Close closes connections to message broker
 func Close() {
+	if config.CONFIG.Messaging.Disabled {
+		return
+	}
 	mqclient.Disconnect(100)
 	log.Print("message broker connection gracefully closed")
 }
@@ -106,6 +112,7 @@ func publish(topic string, event interface{}) (err error) {
 	// TODO async
 	if mqclient == nil {
 		err = fmt.Errorf("Not initialized")
+		return
 	}
 	data, err2 := json.Marshal(event)
 	if err2 != nil {

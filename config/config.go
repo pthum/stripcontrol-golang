@@ -28,6 +28,7 @@ type Config struct {
 		Port         string `yaml:"port" envconfig:"MQ_PORT"`
 		StripTopic   string `yaml:"striptopic" envconfig:"MQ_STRIPTOPIC"`
 		ProfileTopic string `yaml:"profiletopic" envconfig:"MQ_STRIPTOPIC"`
+		Disabled     bool   `yaml:"disabled" envconfig:"MQ_DISABLED"`
 	} `yaml:"messaging"`
 }
 
