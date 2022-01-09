@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/pthum/null"
-	"github.com/pthum/stripcontrol-golang/config"
-	"github.com/pthum/stripcontrol-golang/database"
-	"github.com/pthum/stripcontrol-golang/models"
+	"github.com/pthum/stripcontrol-golang/internal/config"
+	"github.com/pthum/stripcontrol-golang/internal/database"
+	"github.com/pthum/stripcontrol-golang/internal/models"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 )

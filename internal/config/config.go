@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/kelseyhightower/envconfig"
 	"gopkg.in/yaml.v2"
@@ -36,9 +37,9 @@ type Config struct {
 var CONFIG Config
 
 // InitConfig initialize the configuration
-func InitConfig() {
+func InitConfig(configFile string) {
 	var cfg Config
-	readFile(&cfg)
+	readFile(configFile, &cfg)
 	readEnv(&cfg)
 	fmt.Printf("%+v", cfg)
 	CONFIG = cfg
@@ -49,8 +50,14 @@ func processError(err error) {
 	os.Exit(2)
 }
 
-func readFile(cfg *Config) {
-	f, err := os.Open("config.yml")
+func readFile(configFile string, cfg *Config) {
+	abs, err := filepath.Abs(configFile)
+	if err != nil {
+		processError(err)
+	}
+	fmt.Printf("Trying to read config from %v", abs)
+
+	f, err := os.Open(configFile)
 	if err != nil {
 		processError(err)
 	}

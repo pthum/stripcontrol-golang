@@ -18,3 +18,4 @@ static/
 .vscode/
 stripcontrol-golang
 .scannerwork
+*.sqlite

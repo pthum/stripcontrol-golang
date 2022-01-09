@@ -5,7 +5,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/pthum/stripcontrol-golang/models"
+	"github.com/pthum/stripcontrol-golang/internal/models"
 )
 
 // GetAllLedStrips get all LED strips

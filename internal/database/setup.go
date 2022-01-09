@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/pthum/stripcontrol-golang/config"
+	"github.com/pthum/stripcontrol-golang/internal/config"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

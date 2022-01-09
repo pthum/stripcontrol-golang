@@ -1,4 +1,4 @@
-package mappings
+package api
 
 import (
 	"log"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pthum/stripcontrol-golang/controllers"
 )
 
 const (
@@ -69,31 +68,31 @@ func RequestLogger(inner http.Handler) http.Handler {
 
 var routes = Routes{
 
-	Route{"GetColorprofiles", http.MethodGet, profilePath, controllers.GetAllColorProfiles},
+	Route{"GetColorprofiles", http.MethodGet, profilePath, GetAllColorProfiles},
 
-	Route{"CreateColorprofile", http.MethodPost, profilePath, controllers.CreateColorProfile},
+	Route{"CreateColorprofile", http.MethodPost, profilePath, CreateColorProfile},
 
-	Route{"GetColorprofile", http.MethodGet, profileIDPath, controllers.GetColorProfile},
+	Route{"GetColorprofile", http.MethodGet, profileIDPath, GetColorProfile},
 
-	Route{"UpdateColorprofile", http.MethodPut, profileIDPath, controllers.UpdateColorProfile},
+	Route{"UpdateColorprofile", http.MethodPut, profileIDPath, UpdateColorProfile},
 
-	Route{"DeleteColorprofile", http.MethodDelete, profileIDPath, controllers.DeleteColorProfile},
+	Route{"DeleteColorprofile", http.MethodDelete, profileIDPath, DeleteColorProfile},
 
 	// Route{ "ApiHealthGet", http.MethodGet, "/api/health", ApiHealthGet },
 
-	Route{"GetLedstrips", http.MethodGet, ledstripPath, controllers.GetAllLedStrips},
+	Route{"GetLedstrips", http.MethodGet, ledstripPath, GetAllLedStrips},
 
-	Route{"CreateLedstrip", http.MethodPost, ledstripPath, controllers.CreateLedStrip},
+	Route{"CreateLedstrip", http.MethodPost, ledstripPath, CreateLedStrip},
 
-	Route{"GetLedstrip", http.MethodGet, ledstripIDPath, controllers.GetLedStrip},
+	Route{"GetLedstrip", http.MethodGet, ledstripIDPath, GetLedStrip},
 
-	Route{"UpdateLedstrip", http.MethodPut, ledstripIDPath, controllers.UpdateLedStrip},
+	Route{"UpdateLedstrip", http.MethodPut, ledstripIDPath, UpdateLedStrip},
 
-	Route{"DeleteLedstripId", http.MethodDelete, ledstripIDPath, controllers.DeleteLedStrip},
+	Route{"DeleteLedstripId", http.MethodDelete, ledstripIDPath, DeleteLedStrip},
 
-	Route{"GetLedstripReferencedProfile", http.MethodGet, ledstripIDProfilePath, controllers.GetProfileForStrip},
+	Route{"GetLedstripReferencedProfile", http.MethodGet, ledstripIDProfilePath, GetProfileForStrip},
 
-	Route{"UpdateLedstripReferencedProfile", http.MethodPut, ledstripIDProfilePath, controllers.UpdateProfileForStrip},
+	Route{"UpdateLedstripReferencedProfile", http.MethodPut, ledstripIDProfilePath, UpdateProfileForStrip},
 
-	Route{"DeleteLedstripReferencedProfile", http.MethodDelete, ledstripIDProfilePath, controllers.RemoveProfileForStrip},
+	Route{"DeleteLedstripReferencedProfile", http.MethodDelete, ledstripIDProfilePath, RemoveProfileForStrip},
 }

@@ -1,6 +1,6 @@
 package database
 
-import "github.com/pthum/stripcontrol-golang/models"
+import "github.com/pthum/stripcontrol-golang/internal/models"
 
 // GetAllColorProfiles get all color profiles
 func GetAllColorProfiles() (profiles []models.ColorProfile, err error) {

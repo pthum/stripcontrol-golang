@@ -1,4 +1,4 @@
-package controllers
+package api
 
 import (
 	"fmt"
@@ -7,10 +7,10 @@ import (
 	"strconv"
 
 	"github.com/pthum/null"
-	"github.com/pthum/stripcontrol-golang/database"
-	"github.com/pthum/stripcontrol-golang/messaging"
-	"github.com/pthum/stripcontrol-golang/models"
-	"github.com/pthum/stripcontrol-golang/utils"
+	"github.com/pthum/stripcontrol-golang/internal/database"
+	"github.com/pthum/stripcontrol-golang/internal/messaging"
+	"github.com/pthum/stripcontrol-golang/internal/models"
+	"github.com/pthum/stripcontrol-golang/internal/utils"
 )
 
 const (

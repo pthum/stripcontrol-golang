@@ -13,4 +13,4 @@ messaging:
     port: 1883
     striptopic: ledstrip
     profiletopic: profile
-    disabled: false
+    disabled: true

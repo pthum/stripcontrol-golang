@@ -10,18 +10,28 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pthum/stripcontrol-golang/config"
-	"github.com/pthum/stripcontrol-golang/database"
-	"github.com/pthum/stripcontrol-golang/mappings"
-	"github.com/pthum/stripcontrol-golang/messaging"
+	"github.com/pthum/stripcontrol-golang/internal/api"
+	"github.com/pthum/stripcontrol-golang/internal/config"
+	"github.com/pthum/stripcontrol-golang/internal/database"
+	"github.com/pthum/stripcontrol-golang/internal/messaging"
+
+	flag "github.com/spf13/pflag"
 )
 
+var configFile string
+
+func init() {
+	flag.StringVarP(&configFile, "config", "c", "", "this is the path and filename to the config file")
+}
+
 func main() {
-	config.InitConfig()
+
+	flag.Parse()
+	config.InitConfig(configFile)
 
 	var enableDebug = config.CONFIG.Server.Mode != "release"
 
-	router := mappings.NewRouter(enableDebug)
+	router := api.NewRouter(enableDebug)
 	messaging.Init()
 	defer messaging.Close()
 
