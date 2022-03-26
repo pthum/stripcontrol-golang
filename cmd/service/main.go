@@ -30,13 +30,13 @@ func main() {
 	config.InitConfig(configFile)
 
 	var enableDebug = config.CONFIG.Server.Mode != "release"
+	dbh := database.New()
+	defer dbh.Close()
 
-	router := api.NewRouter(enableDebug)
-	messaging.Init()
-	defer messaging.Close()
+	mh := messaging.New()
+	router := api.NewRouter(dbh, mh, enableDebug)
 
-	database.ConnectDataBase()
-	defer database.CloseDB()
+	defer mh.Close()
 
 	// Listen and serve on 0.0.0.0:8080
 	serve := fmt.Sprintf("%s:%s", config.CONFIG.Server.Host, config.CONFIG.Server.Port)

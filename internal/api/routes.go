@@ -10,15 +10,17 @@ import (
 	cpapi "github.com/pthum/stripcontrol-golang/internal/api/colorprofile"
 	api "github.com/pthum/stripcontrol-golang/internal/api/common"
 	lapi "github.com/pthum/stripcontrol-golang/internal/api/led"
+	"github.com/pthum/stripcontrol-golang/internal/database"
+	"github.com/pthum/stripcontrol-golang/internal/messaging"
 )
 
 // NewRouter initializes a new router, setup with all routes
-func NewRouter(enableDebug bool) *mux.Router {
+func NewRouter(db database.DBHandler, mh messaging.EventHandler, enableDebug bool) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 
 	var routes []api.Route
-	var cproutes = cpapi.ColorProfileRoutes()
-	var lroutes = lapi.LEDRoutes()
+	var cproutes = cpapi.ColorProfileRoutes(db, mh)
+	var lroutes = lapi.LEDRoutes(db, mh)
 	routes = append(routes, cproutes...)
 	routes = append(routes, lroutes...)
 
