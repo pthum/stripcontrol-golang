@@ -7,9 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	cpapi "github.com/pthum/stripcontrol-golang/internal/api/colorprofile"
-	api "github.com/pthum/stripcontrol-golang/internal/api/common"
-	lapi "github.com/pthum/stripcontrol-golang/internal/api/led"
 	"github.com/pthum/stripcontrol-golang/internal/database"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 )
@@ -18,9 +15,9 @@ import (
 func NewRouter(db database.DBHandler, mh messaging.EventHandler, enableDebug bool) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 
-	var routes []api.Route
-	var cproutes = cpapi.ColorProfileRoutes(db, mh)
-	var lroutes = lapi.LEDRoutes(db, mh)
+	var routes []Route
+	var cproutes = colorProfileRoutes(db, mh)
+	var lroutes = ledRoutes(db, mh)
 	routes = append(routes, cproutes...)
 	routes = append(routes, lroutes...)
 

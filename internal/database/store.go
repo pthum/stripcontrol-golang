@@ -13,6 +13,7 @@ import (
 type DBReader interface {
 	GetAll(dest interface{}) error
 	Get(id string, obj interface{}) error
+	Close()
 }
 
 type DBWriter interface {
@@ -20,12 +21,12 @@ type DBWriter interface {
 	Update(dbObject interface{}, input interface{}) (err error)
 	Create(input interface{}) (err error)
 	Delete(input interface{}) (err error)
+	Close()
 }
 
 type DBHandler interface {
 	DBReader
 	DBWriter
-	Close()
 }
 
 type GeneralDbHandler struct {
@@ -36,12 +37,12 @@ type GeneralDbHandler struct {
 
 func New() DBHandler {
 	dbh := &GeneralDbHandler{}
-	dbh.ConnectDataBase()
+	dbh.connect()
 	return dbh
 }
 
-// ConnectDataBase set up the connection to the database
-func (d *GeneralDbHandler) ConnectDataBase() {
+// Connect set up the connection to the database
+func (d *GeneralDbHandler) connect() {
 	var conn gorm.Dialector
 	configString := fmt.Sprintf("%s", config.CONFIG.Database.Host)
 	log.Printf("Setup %s database with %s", config.CONFIG.Database.Type, configString)
@@ -56,7 +57,7 @@ func (d *GeneralDbHandler) ConnectDataBase() {
 	d.db = db
 }
 
-// Close closing db
+// Close closes the db connection
 func (d *GeneralDbHandler) Close() {
 	// Get generic database object sql.DB to be able to close
 	sqlDB, err := d.db.DB()
@@ -70,19 +71,19 @@ func (d *GeneralDbHandler) Close() {
 	}
 }
 
-// GetAllLedStrips get all objects
+// GetAll get all objects
 func (d *GeneralDbHandler) GetAll(targets interface{}) (err error) {
 	err = d.db.Find(targets).Error
 	return err
 }
 
-// GetLedStrip loads a object from the database
+// Get loads an object from the database
 func (d *GeneralDbHandler) Get(ID string, target interface{}) (err error) {
 	err = d.db.Where("id = ?", ID).First(&target).Error
 	return err
 }
 
-// UpdateStrip updates the object
+// Update updates the object
 func (d *GeneralDbHandler) Update(dbObject interface{}, input interface{}) (err error) {
 	// calculate the difference, as gorm seem to update too much fields
 	fields := FindPartialUpdateFields(dbObject, input)
