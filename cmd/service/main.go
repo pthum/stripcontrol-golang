@@ -27,19 +27,19 @@ func init() {
 func main() {
 
 	flag.Parse()
-	config.InitConfig(configFile)
+	cfg := config.InitConfig(configFile)
 
-	var enableDebug = config.CONFIG.Server.Mode != "release"
-	dbh := database.New()
+	var enableDebug = cfg.Server.Mode != "release"
+	dbh := database.New(cfg.Database)
 	defer dbh.Close()
 
-	mh := messaging.New()
+	mh := messaging.New(cfg.Messaging)
 	router := api.NewRouter(dbh, mh, enableDebug)
 
 	defer mh.Close()
 
 	// Listen and serve on 0.0.0.0:8080
-	serve := fmt.Sprintf("%s:%s", config.CONFIG.Server.Host, config.CONFIG.Server.Port)
+	serve := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	server := &http.Server{Addr: serve, Handler: router}
 	go func() {
 		// panic(server.ListenAndServe())

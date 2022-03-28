@@ -26,6 +26,7 @@ type EventHandler interface {
 type MQTTHandler struct {
 	mqclient MQTT.Client
 	dbr      database.DBReader
+	cfg      config.MessagingConfig
 }
 
 //define a function for the default message handler
@@ -34,22 +35,23 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 	fmt.Printf("MSG: %s\n", msg.Payload())
 }
 
-func New() EventHandler {
+func New(cfg config.MessagingConfig) EventHandler {
 	// return NoOp implementation if disabled
-	if config.CONFIG.Messaging.Disabled {
+	if cfg.Disabled {
 		return &NoOpEventHandler{}
 	}
 
 	return &MQTTHandler{
-		mqclient: initital(),
+		mqclient: initital(cfg),
+		cfg:      cfg,
 	}
 }
 
 // Init initialize messaging
-func initital() MQTT.Client {
+func initital(cfg config.MessagingConfig) MQTT.Client {
 	//create a ClientOptions struct setting the broker address, clientid, turn
 	//off trace output and set the default message handler
-	configString := fmt.Sprintf("tcp://%s:%s", config.CONFIG.Messaging.Host, config.CONFIG.Messaging.Port)
+	configString := fmt.Sprintf("tcp://%s:%s", cfg.Host, cfg.Port)
 	opts := MQTT.NewClientOptions().AddBroker(configString)
 	opts.SetClientID("stripcontrol-go")
 	opts.SetDefaultPublishHandler(f)
@@ -86,7 +88,7 @@ func (m *MQTTHandler) PublishStripDeleteEvent(id null.Int) (err error) {
 
 // PublishStripEvent publishes a strip event
 func (m *MQTTHandler) PublishStripEvent(event model.StripEvent) (err error) {
-	err = m.publish(config.CONFIG.Messaging.StripTopic, event)
+	err = m.publish(m.cfg.StripTopic, event)
 	return
 }
 func (m *MQTTHandler) publish(topic string, event interface{}) (err error) {
@@ -123,7 +125,7 @@ func (m *MQTTHandler) PublishProfileDeleteEvent(id null.Int) (err error) {
 
 // PublishProfileEvent publishes a profile event
 func (m *MQTTHandler) publishProfileEvent(event model.ProfileEvent) (err error) {
-	err = m.publish(config.CONFIG.Messaging.ProfileTopic, event)
+	err = m.publish(m.cfg.ProfileTopic, event)
 	return
 }
 

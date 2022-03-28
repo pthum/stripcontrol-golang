@@ -11,38 +11,44 @@ import (
 
 // Config the configuration of this service
 type Config struct {
-	Server struct {
-		Host string `yaml:"host" envconfig:"SERVER_HOST"`
-		Port string `yaml:"port" envconfig:"SERVER_PORT"`
-		Mode string `yaml:"mode" envconfig:"SERVER_MODE"`
-	} `yaml:"server"`
-	Database struct {
-		Type     string `yaml:"type" envconfig:"DB_TYPE"`
-		Username string `yaml:"user" envconfig:"DB_USERNAME"`
-		Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
-		Host     string `yaml:"host" envconfig:"DB_HOST"`
-		Port     string `yaml:"port" envconfig:"DB_PORT"`
-		DbName   string `yaml:"name" envconfig:"DB_NAME"`
-	} `yaml:"database"`
-	Messaging struct {
-		Host         string `yaml:"host" envconfig:"MQ_HOST"`
-		Port         string `yaml:"port" envconfig:"MQ_PORT"`
-		StripTopic   string `yaml:"striptopic" envconfig:"MQ_STRIPTOPIC"`
-		ProfileTopic string `yaml:"profiletopic" envconfig:"MQ_STRIPTOPIC"`
-		Disabled     bool   `yaml:"disabled" envconfig:"MQ_DISABLED"`
-	} `yaml:"messaging"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	Messaging MessagingConfig `yaml:"messaging"`
+}
+
+type ServerConfig struct {
+	Host string `yaml:"host" envconfig:"SERVER_HOST"`
+	Port string `yaml:"port" envconfig:"SERVER_PORT"`
+	Mode string `yaml:"mode" envconfig:"SERVER_MODE"`
+}
+
+type DatabaseConfig struct {
+	Type     string `yaml:"type" envconfig:"DB_TYPE"`
+	Username string `yaml:"user" envconfig:"DB_USERNAME"`
+	Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
+	Host     string `yaml:"host" envconfig:"DB_HOST"`
+	Port     string `yaml:"port" envconfig:"DB_PORT"`
+	DbName   string `yaml:"name" envconfig:"DB_NAME"`
+}
+
+type MessagingConfig struct {
+	Host         string `yaml:"host" envconfig:"MQ_HOST"`
+	Port         string `yaml:"port" envconfig:"MQ_PORT"`
+	StripTopic   string `yaml:"striptopic" envconfig:"MQ_STRIPTOPIC"`
+	ProfileTopic string `yaml:"profiletopic" envconfig:"MQ_STRIPTOPIC"`
+	Disabled     bool   `yaml:"disabled" envconfig:"MQ_DISABLED"`
 }
 
 // CONFIG the current configuration
-var CONFIG Config
+// var CONFIG Config
 
 // InitConfig initialize the configuration
-func InitConfig(configFile string) {
+func InitConfig(configFile string) Config {
 	var cfg Config
 	readFile(configFile, &cfg)
 	readEnv(&cfg)
 	fmt.Printf("%+v", cfg)
-	CONFIG = cfg
+	return cfg
 }
 
 func processError(err error) {

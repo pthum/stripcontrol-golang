@@ -35,17 +35,17 @@ type GeneralDbHandler struct {
 
 // DB database object
 
-func New() DBHandler {
+func New(cfg config.DatabaseConfig) DBHandler {
 	dbh := &GeneralDbHandler{}
-	dbh.connect()
+	dbh.connect(cfg)
 	return dbh
 }
 
 // Connect set up the connection to the database
-func (d *GeneralDbHandler) connect() {
+func (d *GeneralDbHandler) connect(cfg config.DatabaseConfig) {
 	var conn gorm.Dialector
-	configString := fmt.Sprintf("%s", config.CONFIG.Database.Host)
-	log.Printf("Setup %s database with %s", config.CONFIG.Database.Type, configString)
+	configString := fmt.Sprintf("%s", cfg.Host)
+	log.Printf("Setup %s database with %s", cfg.Type, configString)
 	conn = sqlite.Open(configString)
 
 	db, err := gorm.Open(conn, &gorm.Config{})
@@ -111,7 +111,7 @@ func FindPartialUpdateFields(dbObject interface{}, input interface{}) (fields []
 	tIn := reflect.TypeOf(input)
 	tDb := reflect.TypeOf(dbObject)
 	if tIn.Kind() != tDb.Kind() || tIn != tDb {
-		log.Println("different kinds no update")
+		log.Println("different kinds, no update")
 		return
 	}
 	valIn := reflect.ValueOf(input)
