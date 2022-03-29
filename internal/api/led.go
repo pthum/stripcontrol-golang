@@ -37,31 +37,29 @@ func ledRoutes(db database.DBHandler, mh messaging.EventHandler) []Route {
 		mh:  mh,
 	}
 	return []Route{
+		{"GetLedstrips", http.MethodGet, ledstripPath, lh.GetAllLedStrips},
 
-		Route{"GetLedstrips", http.MethodGet, ledstripPath, lh.GetAllLedStrips},
+		{"CreateLedstrip", http.MethodPost, ledstripPath, lh.CreateLedStrip},
 
-		Route{"CreateLedstrip", http.MethodPost, ledstripPath, lh.CreateLedStrip},
+		{"GetLedstrip", http.MethodGet, ledstripIDPath, lh.GetLedStrip},
 
-		Route{"GetLedstrip", http.MethodGet, ledstripIDPath, lh.GetLedStrip},
+		{"UpdateLedstrip", http.MethodPut, ledstripIDPath, lh.UpdateLedStrip},
 
-		Route{"UpdateLedstrip", http.MethodPut, ledstripIDPath, lh.UpdateLedStrip},
+		{"DeleteLedstripId", http.MethodDelete, ledstripIDPath, lh.DeleteLedStrip},
 
-		Route{"DeleteLedstripId", http.MethodDelete, ledstripIDPath, lh.DeleteLedStrip},
+		{"GetLedstripReferencedProfile", http.MethodGet, ledstripIDProfilePath, lh.GetProfileForStrip},
 
-		Route{"GetLedstripReferencedProfile", http.MethodGet, ledstripIDProfilePath, lh.GetProfileForStrip},
+		{"UpdateLedstripReferencedProfile", http.MethodPut, ledstripIDProfilePath, lh.UpdateProfileForStrip},
 
-		Route{"UpdateLedstripReferencedProfile", http.MethodPut, ledstripIDProfilePath, lh.UpdateProfileForStrip},
-
-		Route{"DeleteLedstripReferencedProfile", http.MethodDelete, ledstripIDProfilePath, lh.RemoveProfileForStrip},
+		{"DeleteLedstripReferencedProfile", http.MethodDelete, ledstripIDProfilePath, lh.RemoveProfileForStrip},
 	}
 }
 
 // GetAllLedStrips get all existing led strips
 func (lh *LEDHandlerImpl) GetAllLedStrips(w http.ResponseWriter, r *http.Request) {
 	var strips []model.LedStrip
-	err := lh.dbh.GetAll(&strips)
-	// var strips, err = database.GetAllLedStrips()
-	if err != nil {
+
+	if err := lh.dbh.GetAll(&strips); err != nil {
 		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -73,9 +71,8 @@ func (lh *LEDHandlerImpl) GetAllLedStrips(w http.ResponseWriter, r *http.Request
 func (lh *LEDHandlerImpl) GetLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip model.LedStrip
-	var err = lh.dbh.Get(GetParam(r, "id"), &strip)
-	// var strip, err = database.GetLedStrip(GetParam(r, "id"))
-	if err != nil {
+
+	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
 		HandleError(&w, http.StatusNotFound, stripNotFoundMsg)
 		return
 	}
@@ -110,8 +107,8 @@ func (lh *LEDHandlerImpl) CreateLedStrip(w http.ResponseWriter, r *http.Request)
 func (lh *LEDHandlerImpl) UpdateLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip model.LedStrip
-	var err = lh.dbh.Get(GetParam(r, "id"), &strip)
-	if err != nil {
+
+	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
 		HandleError(&w, http.StatusNotFound, stripNotFoundMsg)
 		return
 	}
@@ -136,8 +133,8 @@ func (lh *LEDHandlerImpl) UpdateLedStrip(w http.ResponseWriter, r *http.Request)
 func (lh *LEDHandlerImpl) DeleteLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip model.LedStrip
-	var err = lh.dbh.Get(GetParam(r, "id"), &strip)
-	if err != nil {
+
+	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
 		HandleError(&w, http.StatusNotFound, stripNotFoundMsg)
 		return
 	}
@@ -154,9 +151,9 @@ func (lh *LEDHandlerImpl) DeleteLedStrip(w http.ResponseWriter, r *http.Request)
 func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip model.LedStrip
-	var err1 = lh.dbh.Get(GetParam(r, "id"), &strip)
-	if err1 != nil {
-		HandleError(&w, http.StatusBadRequest, err1.Error())
+
+	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -166,15 +163,15 @@ func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.R
 		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	var profile model.ColorProfile
-	var err2 = lh.dbh.Get(strconv.FormatInt(input.ID, 10), &profile)
-	if err2 != nil {
-		HandleError(&w, http.StatusBadRequest, err2.Error())
+	if err := lh.dbh.Get(strconv.FormatInt(input.ID, 10), &profile); err != nil {
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 	strip.ProfileID = null.NewInt(profile.ID, true)
 
-	lh.dbh.Save(strip)
+	lh.dbh.Save(&strip)
 
 	go lh.mh.PublishStripSaveEvent(null.NewInt(strip.ID, true), strip)
 
@@ -185,9 +182,9 @@ func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.R
 func (lh *LEDHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip model.LedStrip
-	var err1 = lh.dbh.Get(GetParam(r, "id"), &strip)
-	if err1 != nil {
-		HandleError(&w, http.StatusBadRequest, err1.Error())
+
+	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if !strip.ProfileID.Valid {
@@ -195,9 +192,9 @@ func (lh *LEDHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var profile model.ColorProfile
-	var err2 = lh.dbh.Get(strconv.FormatInt(strip.ProfileID.Int64, 10), &profile)
-	if err2 != nil {
-		HandleError(&w, http.StatusBadRequest, err2.Error())
+
+	if err := lh.dbh.Get(strconv.FormatInt(strip.ProfileID.Int64, 10), &profile); err != nil {
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -208,9 +205,8 @@ func (lh *LEDHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Requ
 func (lh *LEDHandlerImpl) RemoveProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var strip model.LedStrip
-	var err1 = lh.dbh.Get(GetParam(r, "id"), &strip)
-	if err1 != nil {
-		HandleError(&w, http.StatusBadRequest, err1.Error())
+	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
+		HandleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
 	strip.ProfileID.Valid = false

@@ -51,8 +51,8 @@ func colorProfileRoutes(db database.DBHandler, mh messaging.EventHandler) []Rout
 // GetAllColorProfiles get all color profiles
 func (h *CPHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Request) {
 	var profiles []model.ColorProfile
-	var err = h.dbh.GetAll(&profiles)
-	if err != nil {
+
+	if err := h.dbh.GetAll(&profiles); err != nil {
 		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -122,11 +122,11 @@ func (h *CPHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Reques
 func (h *CPHandlerImpl) DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	var profile model.ColorProfile
-	var err = h.dbh.Get(GetParam(r, "id"), &profile)
-	if err != nil {
+	if err := h.dbh.Get(GetParam(r, "id"), &profile); err != nil {
 		HandleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
 	}
+
 	if err := h.dbh.Delete(&profile); err != nil {
 		HandleError(&w, http.StatusBadRequest, err.Error())
 		return

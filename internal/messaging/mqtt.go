@@ -18,7 +18,6 @@ type EventHandler interface {
 	Close()
 	PublishStripSaveEvent(id null.Int, strip model.LedStrip) (err error)
 	PublishStripDeleteEvent(id null.Int) (err error)
-	PublishStripEvent(event model.StripEvent) (err error)
 	PublishProfileSaveEvent(id null.Int, profile model.ColorProfile) (err error)
 	PublishProfileDeleteEvent(id null.Int) (err error)
 }
@@ -75,19 +74,19 @@ func (m *MQTTHandler) Close() {
 // PublishStripSaveEvent publishes a strip save event
 func (m *MQTTHandler) PublishStripSaveEvent(id null.Int, strip model.LedStrip) (err error) {
 	var event = m.createStripEvent(id, strip)
-	err = m.PublishStripEvent(event)
+	err = m.publishStripEvent(event)
 	return
 }
 
 // PublishStripDeleteEvent publishes a strip save event
 func (m *MQTTHandler) PublishStripDeleteEvent(id null.Int) (err error) {
 	var event = m.createDeleteStripEvent(id)
-	err = m.PublishStripEvent(event)
+	err = m.publishStripEvent(event)
 	return
 }
 
 // PublishStripEvent publishes a strip event
-func (m *MQTTHandler) PublishStripEvent(event model.StripEvent) (err error) {
+func (m *MQTTHandler) publishStripEvent(event model.StripEvent) (err error) {
 	err = m.publish(m.cfg.StripTopic, event)
 	return
 }
@@ -145,7 +144,7 @@ func (m *MQTTHandler) createStripEvent(id null.Int, strip model.LedStrip) (event
 	event.Strip.Strip.SpeedHz = strip.SpeedHz.Int64
 	if strip.ProfileID.Valid {
 		var prof model.ColorProfile
-		var _ = m.dbr.Get(strconv.FormatInt(strip.ProfileID.Int64, 10), &prof)
+		_ = m.dbr.Get(strconv.FormatInt(strip.ProfileID.Int64, 10), &prof)
 		event.Strip.Strip.Profile.Valid = true
 		event.Strip.Strip.Profile.Profile = prof
 	}

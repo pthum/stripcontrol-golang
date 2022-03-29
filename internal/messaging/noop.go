@@ -20,10 +20,6 @@ func (m *NoOpEventHandler) PublishStripDeleteEvent(id null.Int) (err error) {
 	return nil
 }
 
-func (m *NoOpEventHandler) PublishStripEvent(event model.StripEvent) (err error) {
-	return nil
-}
-
 func (m *NoOpEventHandler) PublishProfileSaveEvent(id null.Int, profile model.ColorProfile) (err error) {
 	return nil
 }
