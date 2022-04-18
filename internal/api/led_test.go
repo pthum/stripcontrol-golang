@@ -568,6 +568,7 @@ func TestUpdateProfileForLedStrip(t *testing.T) {
 		getStrip        model.LedStrip
 		body            *model.ColorProfile
 		getProfileError error
+		saveError       error
 		expectedStatus  int
 	}{
 		{
@@ -599,6 +600,14 @@ func TestUpdateProfileForLedStrip(t *testing.T) {
 			body:            &updateProfile,
 			expectedStatus:  http.StatusNotFound,
 		},
+		{
+			name:           "strip_save_error",
+			getStripError:  nil,
+			getStrip:       returnObj,
+			body:           &updateProfile,
+			saveError:      errors.New("save error"),
+			expectedStatus: http.StatusInternalServerError,
+		},
 	}
 
 	for _, tc := range tests {
@@ -624,10 +633,14 @@ func TestUpdateProfileForLedStrip(t *testing.T) {
 						*destobj = *tc.body
 					}
 				}).Return(tc.getProfileError).Once()
-			}
-			if tc.getStripError == nil && tc.getProfileError == nil && tc.body != nil {
-				dbh.EXPECT().Save(mock.Anything).Return(nil)
-				mh.EXPECT().PublishStripSaveEvent(mock.Anything, mock.Anything).Return(nil)
+
+				if tc.getProfileError == nil {
+					dbh.EXPECT().Save(mock.Anything).Return(tc.saveError)
+
+					if tc.saveError == nil {
+						mh.EXPECT().PublishStripSaveEvent(mock.Anything, mock.Anything).Return(nil)
+					}
+				}
 			}
 
 			var body io.Reader
@@ -647,7 +660,7 @@ func TestUpdateProfileForLedStrip(t *testing.T) {
 			res := w.Result()
 			defer res.Body.Close()
 
-			if tc.getStripError == nil && tc.getProfileError == nil && tc.body != nil {
+			if tc.getStripError == nil && tc.getProfileError == nil && tc.body != nil && tc.saveError == nil {
 				var result model.ColorProfile
 				err := unmarshHelp(res, &result)
 				assert.Nil(t, err)

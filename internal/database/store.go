@@ -92,17 +92,17 @@ func (d *GeneralDbHandler) Update(dbObject interface{}, input interface{}) (err 
 }
 
 func (d *GeneralDbHandler) Create(input interface{}) (err error) {
-	err = d.db.Create(&input).Error
+	err = d.db.Create(input).Error
 	return err
 }
 
 func (d *GeneralDbHandler) Save(input interface{}) (err error) {
-	err = d.db.Save(&input).Error
+	err = d.db.Debug().Save(input).Error
 	return err
 }
 
 func (d *GeneralDbHandler) Delete(input interface{}) (err error) {
-	err = d.db.Delete(&input).Error
+	err = d.db.Delete(input).Error
 	return err
 }
 

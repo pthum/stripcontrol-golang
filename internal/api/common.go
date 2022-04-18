@@ -47,7 +47,7 @@ func HandleJSON(w *http.ResponseWriter, status int, result interface{}) {
 	marshalled, err := json.Marshal(result)
 
 	if err != nil {
-		HandleJSON(w, 500, H{"error": err.Error()})
+		HandleJSON(w, http.StatusInternalServerError, H{"error": err.Error()})
 		return
 	}
 

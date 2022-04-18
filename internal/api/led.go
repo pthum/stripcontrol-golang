@@ -171,8 +171,11 @@ func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.R
 	}
 	strip.ProfileID = null.NewInt(profile.ID, true)
 
-	lh.dbh.Save(&strip)
-
+	if err := lh.dbh.Save(&strip); err != nil {
+		log.Printf("Error: %s", err)
+		HandleError(&w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	go lh.mh.PublishStripSaveEvent(null.NewInt(strip.ID, true), strip)
 
 	HandleJSON(&w, http.StatusOK, profile)
