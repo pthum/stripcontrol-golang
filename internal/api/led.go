@@ -153,7 +153,7 @@ func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.R
 	var strip model.LedStrip
 
 	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
-		HandleError(&w, http.StatusBadRequest, err.Error())
+		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -166,7 +166,7 @@ func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.R
 
 	var profile model.ColorProfile
 	if err := lh.dbh.Get(strconv.FormatInt(input.ID, 10), &profile); err != nil {
-		HandleError(&w, http.StatusBadRequest, err.Error())
+		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
 	strip.ProfileID = null.NewInt(profile.ID, true)
@@ -184,17 +184,17 @@ func (lh *LEDHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Requ
 	var strip model.LedStrip
 
 	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
-		HandleError(&w, http.StatusBadRequest, err.Error())
+		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
 	if !strip.ProfileID.Valid {
-		HandleError(&w, http.StatusBadRequest, "Profile not found!")
+		HandleError(&w, http.StatusNotFound, "Profile not found!")
 		return
 	}
 	var profile model.ColorProfile
 
 	if err := lh.dbh.Get(strconv.FormatInt(strip.ProfileID.Int64, 10), &profile); err != nil {
-		HandleError(&w, http.StatusBadRequest, err.Error())
+		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -206,7 +206,7 @@ func (lh *LEDHandlerImpl) RemoveProfileForStrip(w http.ResponseWriter, r *http.R
 	// Get model if exist
 	var strip model.LedStrip
 	if err := lh.dbh.Get(GetParam(r, "id"), &strip); err != nil {
-		HandleError(&w, http.StatusBadRequest, err.Error())
+		HandleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
 	strip.ProfileID.Valid = false

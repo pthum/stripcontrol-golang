@@ -203,7 +203,7 @@ func TestCreateColorProfile(t *testing.T) {
 				}).Return(tc.returnError).Once()
 				body, _ = marshHelp(&tc.body)
 			}
-			req := httptest.NewRequest(http.MethodGet, "/", body)
+			req := httptest.NewRequest(http.MethodPost, "/", body)
 			w := httptest.NewRecorder()
 
 			cph.CreateColorProfile(w, req)
@@ -289,7 +289,7 @@ func TestDeleteColorProfile(t *testing.T) {
 				}
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodDelete, "/", nil)
 			w := httptest.NewRecorder()
 
 			cph.DeleteColorProfile(w, req)
@@ -386,7 +386,7 @@ func TestUpdateColorProfile(t *testing.T) {
 				}
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/", body)
+			req := httptest.NewRequest(http.MethodPut, "/", body)
 			w := httptest.NewRecorder()
 
 			cph.UpdateColorProfile(w, req)
