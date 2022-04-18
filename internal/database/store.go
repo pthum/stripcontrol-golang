@@ -87,7 +87,7 @@ func (d *GeneralDbHandler) Get(ID string, target interface{}) (err error) {
 func (d *GeneralDbHandler) Update(dbObject interface{}, input interface{}) (err error) {
 	// calculate the difference, as gorm seem to update too much fields
 	fields := FindPartialUpdateFields(dbObject, input)
-	err = d.db.Model(&dbObject).Debug().Select(fields).Updates(input).Error
+	err = d.db.Model(dbObject).Debug().Select(fields).Updates(input).Error
 	return err
 }
 

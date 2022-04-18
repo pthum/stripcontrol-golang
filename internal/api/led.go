@@ -126,7 +126,7 @@ func (lh *LEDHandlerImpl) UpdateLedStrip(w http.ResponseWriter, r *http.Request)
 	// which we accept for now
 	go lh.updateAndHandle(strip, input)
 
-	HandleJSON(&w, http.StatusNoContent, nil)
+	HandleJSON(&w, http.StatusOK, strip)
 }
 
 // DeleteLedStrip delete an LED strip
@@ -221,7 +221,7 @@ func (lh *LEDHandlerImpl) updateAndHandle(strip model.LedStrip, input model.LedS
 	// profile shouldn't be updated through this endpoint
 	input.ProfileID = strip.ProfileID
 
-	if err := lh.dbh.Update(&strip, &input); err != nil {
+	if err := lh.dbh.Update(strip, input); err != nil {
 		log.Printf("error: %s", err.Error())
 		return
 	}
