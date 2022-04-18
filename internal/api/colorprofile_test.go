@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/pthum/null"
 	dbm "github.com/pthum/stripcontrol-golang/internal/database/mocks"
@@ -122,9 +123,9 @@ func TestGetColorProfile(t *testing.T) {
 			}
 
 			dbh.EXPECT().Get(mock.Anything, mock.Anything).Run(func(id string, dest interface{}) {
-				destarr := dest.(*model.ColorProfile)
+				destobj := dest.(*model.ColorProfile)
 				if tc.returnError == nil {
-					*destarr = tc.returnObj
+					*destobj = tc.returnObj
 				}
 			}).Return(tc.returnError).Once()
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -219,6 +220,87 @@ func TestCreateColorProfile(t *testing.T) {
 				assert.Equal(t, *expectedObj, result)
 				assert.Contains(t, res.Header["Location"][0], strconv.FormatInt(newId, 10))
 			}
+
+			assert.Equal(t, tc.expectedStatus, res.StatusCode)
+			dbh.AssertExpectations(t)
+			mh.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeleteColorProfile(t *testing.T) {
+	returnObj := model.ColorProfile{
+		ID:         185,
+		Red:        null.IntFrom(123),
+		Green:      null.IntFrom(234),
+		Blue:       null.IntFrom(12),
+		Brightness: null.IntFrom(1),
+	}
+
+	tests := []struct {
+		name           string
+		getObj         *model.ColorProfile
+		getError       error
+		deleteError    error
+		expectedStatus int
+	}{
+		{
+			name:           "success_case",
+			getObj:         &returnObj,
+			getError:       nil,
+			deleteError:    nil,
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "missing_profile_to_delete",
+			getObj:         nil,
+			getError:       errors.New("not found"),
+			deleteError:    nil,
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "error_on_delete",
+			getObj:         &returnObj,
+			getError:       nil,
+			deleteError:    errors.New("delete failed"),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dbh := &dbm.DBHandler{}
+			mh := &mhm.EventHandler{}
+			cph := CPHandlerImpl{
+				dbh: dbh,
+				mh:  mh,
+			}
+
+			dbh.EXPECT().Get(mock.Anything, mock.Anything).Run(func(id string, dest interface{}) {
+				destobj := dest.(*model.ColorProfile)
+				if tc.getError == nil {
+					*destobj = *tc.getObj
+				}
+			}).Return(tc.getError).Once()
+
+			if tc.getError == nil {
+				dbh.EXPECT().Delete(mock.Anything).Return(tc.deleteError)
+				if tc.deleteError == nil {
+					mh.EXPECT().PublishProfileDeleteEvent(mock.Anything).Return(nil)
+				}
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+
+			w := httptest.NewRecorder()
+
+			cph.DeleteColorProfile(w, req)
+
+			// small sleep to have the async routines run
+			time.Sleep(50 * time.Millisecond)
+
+			res := w.Result()
+			defer res.Body.Close()
 
 			assert.Equal(t, tc.expectedStatus, res.StatusCode)
 			dbh.AssertExpectations(t)
