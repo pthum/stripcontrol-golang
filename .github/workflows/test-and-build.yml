@@ -11,7 +11,7 @@ jobs:
       # - name: Run Unit Tests
       #   run: go test ./...
       - name: extract_commit_hash
-        run: echo "::set-output name=sha_short::$(echo ${GITHUB_SHA::7})"
+        run: echo "##[set-output name=sha_short;]$(echo ${GITHUB_SHA::7})"
       - name: print hashes
         run: echo "full $GITHUB_SHA, var ${GITHUB_SHA::7} short ${{ steps.extract_commit_hash.outputs.sha_short }} "
   deploy:
@@ -23,7 +23,7 @@ jobs:
         id: version_step
         run: |
           echo "${{ needs.test.outputs.shorthash }}"
-          echo "##[set-output name=version_tag;]$GITHUB_REPOSITORY:${{ needs.test.outputs.shorthash }}"
+          echo "##[set-output name=version_tag;]$GITHUB_REPOSITORY:$(echo ${GITHUB_SHA::7})"
           echo "##[set-output name=latest_tag;]$GITHUB_REPOSITORY:latest"
       - name: Print Version
         run: |
