@@ -17,7 +17,8 @@ jobs:
       - name: Extract Version
         id: version_step
         run: |
-          echo "##[set-output name=version_tag;]$GITHUB_REPOSITORY:$(git rev-parse --short HEAD)"
+          echo "SHORT_SHA=`git rev-parse --short HEAD | cut -c1-8`" >> $GITHUB_ENV
+          echo "##[set-output name=version_tag;]$GITHUB_REPOSITORY:$SHORT_SHA"
           echo "##[set-output name=latest_tag;]$GITHUB_REPOSITORY:latest"
       - name: Print Version
         run: |
