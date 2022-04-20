@@ -13,7 +13,7 @@ jobs:
       - name: extract_commit_hash
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
       - name: print hashes
-        run: echo "full: $GITHUB_SHA, var ${GITHUB_SHA::7} short: ${{ steps.extract_commit_hash.outputs.sha_short }} "
+        run: echo "full $GITHUB_SHA, var ${GITHUB_SHA::7} short ${{ steps.extract_commit_hash.outputs.sha_short }} "
   deploy:
     runs-on: ubuntu-latest
     needs: test
