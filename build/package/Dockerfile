@@ -25,7 +25,6 @@ WORKDIR /app
 RUN apk add ca-certificates
 
 COPY --from=build_base /tmp/stripcontrol-app/out/stripcontrol-app ./
-COPY static ./static
 COPY configs/config.yml ./
 # This container exposes port 8080 to the outside world
 EXPOSE 8080
