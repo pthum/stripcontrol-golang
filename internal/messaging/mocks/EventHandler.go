@@ -3,7 +3,6 @@
 package mocks
 
 import (
-	null "github.com/pthum/null"
 	model "github.com/pthum/stripcontrol-golang/internal/model"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -48,13 +47,13 @@ func (_c *EventHandler_Close_Call) Return() *EventHandler_Close_Call {
 	return _c
 }
 
-// PublishProfileDeleteEvent provides a mock function with given fields: id
-func (_m *EventHandler) PublishProfileDeleteEvent(id null.Int) error {
-	ret := _m.Called(id)
+// PublishProfileEvent provides a mock function with given fields: event
+func (_m *EventHandler) PublishProfileEvent(event *model.ProfileEvent) error {
+	ret := _m.Called(event)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(null.Int) error); ok {
-		r0 = rf(id)
+	if rf, ok := ret.Get(0).(func(*model.ProfileEvent) error); ok {
+		r0 = rf(event)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,36 +61,36 @@ func (_m *EventHandler) PublishProfileDeleteEvent(id null.Int) error {
 	return r0
 }
 
-// EventHandler_PublishProfileDeleteEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishProfileDeleteEvent'
-type EventHandler_PublishProfileDeleteEvent_Call struct {
+// EventHandler_PublishProfileEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishProfileEvent'
+type EventHandler_PublishProfileEvent_Call struct {
 	*mock.Call
 }
 
-// PublishProfileDeleteEvent is a helper method to define mock.On call
-//   - id null.Int
-func (_e *EventHandler_Expecter) PublishProfileDeleteEvent(id interface{}) *EventHandler_PublishProfileDeleteEvent_Call {
-	return &EventHandler_PublishProfileDeleteEvent_Call{Call: _e.mock.On("PublishProfileDeleteEvent", id)}
+// PublishProfileEvent is a helper method to define mock.On call
+//   - event *model.ProfileEvent
+func (_e *EventHandler_Expecter) PublishProfileEvent(event interface{}) *EventHandler_PublishProfileEvent_Call {
+	return &EventHandler_PublishProfileEvent_Call{Call: _e.mock.On("PublishProfileEvent", event)}
 }
 
-func (_c *EventHandler_PublishProfileDeleteEvent_Call) Run(run func(id null.Int)) *EventHandler_PublishProfileDeleteEvent_Call {
+func (_c *EventHandler_PublishProfileEvent_Call) Run(run func(event *model.ProfileEvent)) *EventHandler_PublishProfileEvent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(null.Int))
+		run(args[0].(*model.ProfileEvent))
 	})
 	return _c
 }
 
-func (_c *EventHandler_PublishProfileDeleteEvent_Call) Return(err error) *EventHandler_PublishProfileDeleteEvent_Call {
-	_c.Call.Return(err)
+func (_c *EventHandler_PublishProfileEvent_Call) Return(_a0 error) *EventHandler_PublishProfileEvent_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 
-// PublishProfileSaveEvent provides a mock function with given fields: id, profile
-func (_m *EventHandler) PublishProfileSaveEvent(id null.Int, profile model.ColorProfile) error {
-	ret := _m.Called(id, profile)
+// PublishStripEvent provides a mock function with given fields: event
+func (_m *EventHandler) PublishStripEvent(event *model.StripEvent) error {
+	ret := _m.Called(event)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(null.Int, model.ColorProfile) error); ok {
-		r0 = rf(id, profile)
+	if rf, ok := ret.Get(0).(func(*model.StripEvent) error); ok {
+		r0 = rf(event)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -99,102 +98,26 @@ func (_m *EventHandler) PublishProfileSaveEvent(id null.Int, profile model.Color
 	return r0
 }
 
-// EventHandler_PublishProfileSaveEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishProfileSaveEvent'
-type EventHandler_PublishProfileSaveEvent_Call struct {
+// EventHandler_PublishStripEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishStripEvent'
+type EventHandler_PublishStripEvent_Call struct {
 	*mock.Call
 }
 
-// PublishProfileSaveEvent is a helper method to define mock.On call
-//   - id null.Int
-//   - profile model.ColorProfile
-func (_e *EventHandler_Expecter) PublishProfileSaveEvent(id interface{}, profile interface{}) *EventHandler_PublishProfileSaveEvent_Call {
-	return &EventHandler_PublishProfileSaveEvent_Call{Call: _e.mock.On("PublishProfileSaveEvent", id, profile)}
+// PublishStripEvent is a helper method to define mock.On call
+//   - event *model.StripEvent
+func (_e *EventHandler_Expecter) PublishStripEvent(event interface{}) *EventHandler_PublishStripEvent_Call {
+	return &EventHandler_PublishStripEvent_Call{Call: _e.mock.On("PublishStripEvent", event)}
 }
 
-func (_c *EventHandler_PublishProfileSaveEvent_Call) Run(run func(id null.Int, profile model.ColorProfile)) *EventHandler_PublishProfileSaveEvent_Call {
+func (_c *EventHandler_PublishStripEvent_Call) Run(run func(event *model.StripEvent)) *EventHandler_PublishStripEvent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(null.Int), args[1].(model.ColorProfile))
+		run(args[0].(*model.StripEvent))
 	})
 	return _c
 }
 
-func (_c *EventHandler_PublishProfileSaveEvent_Call) Return(err error) *EventHandler_PublishProfileSaveEvent_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-// PublishStripDeleteEvent provides a mock function with given fields: id
-func (_m *EventHandler) PublishStripDeleteEvent(id null.Int) error {
-	ret := _m.Called(id)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(null.Int) error); ok {
-		r0 = rf(id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// EventHandler_PublishStripDeleteEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishStripDeleteEvent'
-type EventHandler_PublishStripDeleteEvent_Call struct {
-	*mock.Call
-}
-
-// PublishStripDeleteEvent is a helper method to define mock.On call
-//   - id null.Int
-func (_e *EventHandler_Expecter) PublishStripDeleteEvent(id interface{}) *EventHandler_PublishStripDeleteEvent_Call {
-	return &EventHandler_PublishStripDeleteEvent_Call{Call: _e.mock.On("PublishStripDeleteEvent", id)}
-}
-
-func (_c *EventHandler_PublishStripDeleteEvent_Call) Run(run func(id null.Int)) *EventHandler_PublishStripDeleteEvent_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(null.Int))
-	})
-	return _c
-}
-
-func (_c *EventHandler_PublishStripDeleteEvent_Call) Return(err error) *EventHandler_PublishStripDeleteEvent_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-// PublishStripSaveEvent provides a mock function with given fields: id, strip
-func (_m *EventHandler) PublishStripSaveEvent(id null.Int, strip model.LedStrip) error {
-	ret := _m.Called(id, strip)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(null.Int, model.LedStrip) error); ok {
-		r0 = rf(id, strip)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// EventHandler_PublishStripSaveEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishStripSaveEvent'
-type EventHandler_PublishStripSaveEvent_Call struct {
-	*mock.Call
-}
-
-// PublishStripSaveEvent is a helper method to define mock.On call
-//   - id null.Int
-//   - strip model.LedStrip
-func (_e *EventHandler_Expecter) PublishStripSaveEvent(id interface{}, strip interface{}) *EventHandler_PublishStripSaveEvent_Call {
-	return &EventHandler_PublishStripSaveEvent_Call{Call: _e.mock.On("PublishStripSaveEvent", id, strip)}
-}
-
-func (_c *EventHandler_PublishStripSaveEvent_Call) Run(run func(id null.Int, strip model.LedStrip)) *EventHandler_PublishStripSaveEvent_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(null.Int), args[1].(model.LedStrip))
-	})
-	return _c
-}
-
-func (_c *EventHandler_PublishStripSaveEvent_Call) Return(err error) *EventHandler_PublishStripSaveEvent_Call {
-	_c.Call.Return(err)
+func (_c *EventHandler_PublishStripEvent_Call) Return(_a0 error) *EventHandler_PublishStripEvent_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 

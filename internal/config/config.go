@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -23,11 +23,9 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Type     string `yaml:"type" envconfig:"DB_TYPE"`
 	Username string `yaml:"user" envconfig:"DB_USERNAME"`
 	Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
 	Host     string `yaml:"host" envconfig:"DB_HOST"`
-	Port     string `yaml:"port" envconfig:"DB_PORT"`
 	DbName   string `yaml:"name" envconfig:"DB_NAME"`
 }
 
@@ -39,46 +37,32 @@ type MessagingConfig struct {
 	Disabled     bool   `yaml:"disabled" envconfig:"MQ_DISABLED"`
 }
 
-// CONFIG the current configuration
-// var CONFIG Config
-
 // InitConfig initialize the configuration
-func InitConfig(configFile string) Config {
-	var cfg Config
-	readFile(configFile, &cfg)
-	readEnv(&cfg)
-	fmt.Printf("%+v", cfg)
-	return cfg
-}
-
-func processError(err error) {
-	fmt.Println(err)
-	os.Exit(2)
-}
-
-func readFile(configFile string, cfg *Config) {
+func InitConfig(configFile string) (cfg *Config, err error) {
+	cfg = &Config{}
 	abs, err := filepath.Abs(configFile)
 	if err != nil {
-		processError(err)
+		return nil, err
 	}
-	fmt.Printf("Trying to read config from %v", abs)
-
-	f, err := os.Open(configFile)
+	data, err := os.ReadFile(filepath.Clean(abs))
 	if err != nil {
-		processError(err)
+		return cfg, err
 	}
-	defer f.Close()
-
-	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(cfg)
-	if err != nil {
-		processError(err)
+	if err = cfg.readConf(data); err != nil {
+		return cfg, err
 	}
+	log.Printf("%+v", cfg)
+	return cfg, nil
 }
 
-func readEnv(cfg *Config) {
-	err := envconfig.Process("", cfg)
+func (cfg *Config) readConf(data []byte) (err error) {
+	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
-		processError(err)
+		return
 	}
+	return cfg.readEnv()
+}
+
+func (cfg *Config) readEnv() (err error) {
+	return envconfig.Process("", cfg)
 }

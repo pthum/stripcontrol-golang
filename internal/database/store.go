@@ -24,6 +24,7 @@ type DBWriter interface {
 	Close()
 }
 
+//go:generate mockery --name=DBHandler --with-expecter=true
 type DBHandler interface {
 	DBReader
 	DBWriter
@@ -44,8 +45,8 @@ func New(cfg config.DatabaseConfig) DBHandler {
 // Connect set up the connection to the database
 func (d *GeneralDbHandler) connect(cfg config.DatabaseConfig) {
 	var conn gorm.Dialector
-	configString := fmt.Sprintf("%s", cfg.Host)
-	log.Printf("Setup %s database with %s", cfg.Type, configString)
+	configString := cfg.Host
+	log.Printf("Setup database with %s", configString)
 	conn = sqlite.Open(configString)
 
 	db, err := gorm.Open(conn, &gorm.Config{})
@@ -64,6 +65,7 @@ func (d *GeneralDbHandler) Close() {
 	if err != nil {
 		log.Printf("err closing db connection: %s", err.Error())
 	}
+
 	if err = sqlDB.Close(); err != nil {
 		log.Printf("err closing db connection: %s", err.Error())
 	} else {
@@ -73,41 +75,35 @@ func (d *GeneralDbHandler) Close() {
 
 // GetAll get all objects
 func (d *GeneralDbHandler) GetAll(targets interface{}) (err error) {
-	err = d.db.Find(targets).Error
-	return err
+	return d.db.Find(targets).Error
 }
 
 // Get loads an object from the database
 func (d *GeneralDbHandler) Get(ID string, target interface{}) (err error) {
-	err = d.db.Where("id = ?", ID).First(&target).Error
-	return err
+	return d.db.Where("id = ?", ID).First(&target).Error
 }
 
 // Update updates the object
 func (d *GeneralDbHandler) Update(dbObject interface{}, input interface{}) (err error) {
 	// calculate the difference, as gorm seem to update too much fields
-	fields := FindPartialUpdateFields(dbObject, input)
-	err = d.db.Model(dbObject).Debug().Select(fields).Updates(input).Error
-	return err
+	fields := findPartialUpdateFields(dbObject, input)
+	return d.db.Model(dbObject).Debug().Select(fields).Updates(input).Error
 }
 
 func (d *GeneralDbHandler) Create(input interface{}) (err error) {
-	err = d.db.Create(input).Error
-	return err
+	return d.db.Create(input).Error
 }
 
 func (d *GeneralDbHandler) Save(input interface{}) (err error) {
-	err = d.db.Debug().Save(input).Error
-	return err
+	return d.db.Debug().Save(input).Error
 }
 
 func (d *GeneralDbHandler) Delete(input interface{}) (err error) {
-	err = d.db.Delete(input).Error
-	return err
+	return d.db.Delete(input).Error
 }
 
-// FindPartialUpdateFields find the fields that need to be updated
-func FindPartialUpdateFields(dbObject interface{}, input interface{}) (fields []string) {
+// findPartialUpdateFields find the fields that need to be updated
+func findPartialUpdateFields(dbObject interface{}, input interface{}) (fields []string) {
 	tIn := reflect.TypeOf(input)
 	tDb := reflect.TypeOf(dbObject)
 	if tIn.Kind() != tDb.Kind() || tIn != tDb {
