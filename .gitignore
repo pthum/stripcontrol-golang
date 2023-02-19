@@ -464,3 +464,5 @@ stripcontrol-golang
 .scannerwork
 *.sqlite
 report.json
+report.xml
+coverage.xml
