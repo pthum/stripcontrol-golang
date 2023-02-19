@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS build_base
+FROM golang:1.19-alpine AS build_base
 
 RUN apk add --no-cache git gcc libc-dev sqlite
 
@@ -12,18 +12,25 @@ RUN go mod download && go mod tidy
 
 COPY . .
 
+FROM build_base as test
+RUN go install github.com/jstemmer/go-junit-report/v2@latest \
+   && go install github.com/t-yuki/gocover-cobertura@latest \
 # Unit tests
-# RUN CGO_ENABLED=0 go test -v
+  && chmod +x build/testentrypoint.sh
 
+CMD [ "/tmp/stripcontrol-app/build/testentrypoint.sh" ]
+
+
+FROM build_base as build
 # Build the Go app
 RUN go build -o ./out/stripcontrol-app cmd/service/main.go
 
 # Start fresh from a smaller image
-FROM alpine:3.12
+FROM alpine:3.17 as finalimage
 WORKDIR /app
-RUN apk add ca-certificates
+RUN apk add --no-cache  ca-certificates
 
-COPY --from=build_base /tmp/stripcontrol-app/out/stripcontrol-app ./
+COPY --from=build /tmp/stripcontrol-app/out/stripcontrol-app ./
 COPY static ./static
 COPY configs/config.yml ./
 # This container exposes port 8080 to the outside world
