@@ -3,7 +3,7 @@ library 'jshared' _
 properties([
     parameters([booleanParam('deployParam')])
   ])
-def servicename = "stripcontrol-go"
+def serviceName = "stripcontrol-go"
 def deploy = params.deployParam
 def buildUtil = new de.backenddev.jshared.BuildUtil(this)
 def tag
@@ -15,7 +15,7 @@ node {
 
   stage("test") {
     dir("build") {
-        sh "./unit-test.sh $servicename"
+        sh "./unit-test.sh $serviceName"
     }
     junit allowEmptyResults: true, testResults: 'report.xml'
     publishCoverage adapters: [cobertura('coverage.xml')], checksName: '', sourceFileResolver: sourceFiles('NEVER_STORE')
