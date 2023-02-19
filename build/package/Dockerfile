@@ -28,10 +28,9 @@ RUN go build -o ./out/stripcontrol-app cmd/service/main.go
 # Start fresh from a smaller image
 FROM alpine:3.17 as finalimage
 WORKDIR /app
-RUN apk add --no-cache  ca-certificates
+RUN apk add --no-cache ca-certificates
 
 COPY --from=build /tmp/stripcontrol-app/out/stripcontrol-app ./
-COPY static ./static
 COPY configs/config.yml ./
 # This container exposes port 8080 to the outside world
 EXPOSE 8080
