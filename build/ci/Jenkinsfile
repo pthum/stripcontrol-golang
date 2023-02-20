@@ -23,7 +23,7 @@ node {
 
   stage("build") {
     def buildArgs=[:]
-    def platforms=[]
+    def platforms=["linux/arm64", "linux/arm/v7"]
     def additionalArgs = "--target=finalimage"
     buildUtil.buildAndPushImage(serviceName, tag, "build/package/Dockerfile", ".",buildArgs, platforms, additionalArgs)
   }
