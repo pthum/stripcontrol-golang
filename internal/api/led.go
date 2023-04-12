@@ -231,7 +231,9 @@ func (lh *LEDHandlerImpl) updateAndHandle(dbStrip model.LedStrip, input model.Le
 		log.Printf("error: %s", err.Error())
 		return
 	}
-
+	// load profile for event
+	var profile model.ColorProfile
+	lh.dbh.Get(strconv.FormatInt(input.ProfileID.Int64, 10), &profile)
 	lh.publishStripSaveEvent(null.NewInt(input.ID, true), input, nil)
 }
 
