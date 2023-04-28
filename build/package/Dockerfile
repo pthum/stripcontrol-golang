@@ -19,19 +19,22 @@ RUN go install github.com/jstemmer/go-junit-report/v2@bfac3ec01f0cf6ed0dbff9f5f2
 # Unit tests
   && chmod +x build/testentrypoint.sh
 
-CMD [ "/tmp/stripcontrol-app/build/testentrypoint.sh" ]
+ENTRYPOINT [ "/tmp/stripcontrol-app/build/testentrypoint.sh" ]
 
 
-FROM build_base as build
-# Build the Go app
-RUN go build -o ./out/stripcontrol-app cmd/service/main.go
+FROM alpine:3.17 as builder
+WORKDIR /app
+COPY ./out/ ./
+RUN apkArch="$(apk --print-arch)"; \
+    echo "arch: $apkArch"; \
+    mv "stripcontrol-app-$apkArch" "stripcontrol-app"
 
 # Start fresh from a smaller image
 FROM alpine:3.17 as finalimage
 WORKDIR /app
 RUN apk add --no-cache ca-certificates
 
-COPY --from=build /tmp/stripcontrol-app/out/stripcontrol-app ./
+COPY --from=builder /app/stripcontrol-app ./
 COPY configs/config.yml ./
 # This container exposes port 8080 to the outside world
 EXPOSE 8080
