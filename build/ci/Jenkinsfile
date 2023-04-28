@@ -15,7 +15,7 @@ node {
 
   stage("test") {
     dir("build") {
-        sh "./unit-test.sh $serviceName"
+        sh "./build-and-test.sh $serviceName"
     }
     buildUtil.publishTests('report.xml')
     buildUtil.publishCoverage('coverage.xml')
