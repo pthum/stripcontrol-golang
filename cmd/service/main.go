@@ -10,10 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/pthum/stripcontrol-golang/internal/api"
 	"github.com/pthum/stripcontrol-golang/internal/config"
-	"github.com/pthum/stripcontrol-golang/internal/database"
+	"github.com/pthum/stripcontrol-golang/internal/database/csv"
 	messagingimpl "github.com/pthum/stripcontrol-golang/internal/messaging/impl"
+	"github.com/pthum/stripcontrol-golang/internal/model"
 
 	flag "github.com/spf13/pflag"
 )
@@ -31,15 +33,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error initializing config: %v", err)
 	}
-
 	var enableDebug = cfg.Server.Mode != "release"
-	dbh := database.New(cfg.Database)
-	defer dbh.Close()
+
+	s := gocron.NewScheduler(time.UTC)
+	cpDbh := csv.NewHandler[model.ColorProfile](&cfg.CSV)
+	defer cpDbh.Close()
+	lsDbh := csv.NewHandler[model.LedStrip](&cfg.CSV)
+	defer lsDbh.Close()
+
+	cpDbh.ScheduleJob(s)
+	lsDbh.ScheduleJob(s)
 
 	mh := messagingimpl.New(cfg.Messaging)
 	defer mh.Close()
 
-	router := api.NewRouter(dbh, mh, enableDebug)
+	router := api.NewRouter(cpDbh, lsDbh, mh, enableDebug)
 
 	// Listen and serve on 0.0.0.0:8080
 	serve := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -50,11 +58,13 @@ func main() {
 		Handler:      router,
 	}
 	go func() {
-		// panic(server.ListenAndServe())
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen:%+s\n", err)
 		}
 	}()
+
+	// start scheduler
+	s.StartAsync()
 
 	// Create channel for shutdown signals.
 	stop := make(chan os.Signal, 1)

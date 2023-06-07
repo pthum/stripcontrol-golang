@@ -10,80 +10,48 @@ import (
 )
 
 func TestDBCreateAndRead(t *testing.T) {
-	dbh := initHandler()
-	dbh.db.AutoMigrate(&model.ColorProfile{})
-	defer dbh.Close()
-
-	testProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 123},
-		Blue:       null.IntFrom(1),
-		Brightness: null.IntFrom(2),
-		Red:        null.IntFrom(3),
-		Green:      null.IntFrom(4),
-	}
+	dbh := initHandler[model.ColorProfile](t)
+	testProfile := createTestProfile(123)
 
 	dbh.Create(&testProfile)
-	var result model.ColorProfile
-	dbh.Get("123", &result)
-	assert.Equal(t, testProfile, result)
+	result, err := dbh.Get("123")
+	assert.Equal(t, testProfile, *result)
+	assert.NoError(t, err)
 }
 
 func TestDBSaveGetAllAndDelete(t *testing.T) {
-	dbh := initHandler()
-	dbh.db.AutoMigrate(&model.ColorProfile{})
-	defer dbh.Close()
-
-	testProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 234},
-		Blue:       null.IntFrom(1),
-		Brightness: null.IntFrom(2),
-		Red:        null.IntFrom(3),
-		Green:      null.IntFrom(4),
-	}
+	dbh := initHandler[model.ColorProfile](t)
+	testProfile := createTestProfile(234)
 
 	dbh.Create(&testProfile)
 	testProfile.Blue = null.IntFrom(42)
 	dbh.Save(&testProfile)
-	var result []model.ColorProfile
-	dbh.GetAll(&result)
+	result, err := dbh.GetAll()
 	assert.Equal(t, 1, len(result))
 	assert.Equal(t, testProfile, result[0])
+	assert.NoError(t, err)
 
 	dbh.Delete(&testProfile)
 
-	var resultAfterDelete []model.ColorProfile
-	dbh.GetAll(&resultAfterDelete)
+	resultAfterDelete, err := dbh.GetAll()
 	assert.Equal(t, 0, len(resultAfterDelete))
+	assert.NoError(t, err)
 }
 func TestUpdate(t *testing.T) {
-	dbh := initHandler()
-	dbh.db.AutoMigrate(&model.ColorProfile{})
-	defer dbh.Close()
-	testProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 235},
-		Blue:       null.IntFrom(1),
-		Brightness: null.IntFrom(2),
-		Red:        null.IntFrom(3),
-		Green:      null.IntFrom(4),
-	}
+	dbh := initHandler[model.ColorProfile](t)
+	testProfile := createTestProfile(235)
 	dbh.Create(&testProfile)
 	// copy the profile
 	otherProfile := testProfile
 	otherProfile.Blue = null.IntFrom(42)
 	// test with changes
 	dbh.Update(testProfile, otherProfile)
-	var result model.ColorProfile
-	dbh.Get("235", &result)
-	assert.Equal(t, otherProfile, result)
+	result, err := dbh.Get("235")
+	assert.Equal(t, otherProfile, *result)
+	assert.NoError(t, err)
 }
 func TestUpdateFields_Empty(t *testing.T) {
-	testProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 234},
-		Blue:       null.IntFrom(1),
-		Brightness: null.IntFrom(2),
-		Red:        null.IntFrom(3),
-		Green:      null.IntFrom(4),
-	}
+	testProfile := createTestProfile(234)
 	// copy the profile
 	otherProfile := testProfile
 	// test with no changes
@@ -92,13 +60,7 @@ func TestUpdateFields_Empty(t *testing.T) {
 }
 
 func TestUpdateFields_WithChanges(t *testing.T) {
-	testProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 235},
-		Blue:       null.IntFrom(1),
-		Brightness: null.IntFrom(2),
-		Red:        null.IntFrom(3),
-		Green:      null.IntFrom(4),
-	}
+	testProfile := createTestProfile(235)
 	// copy the profile
 	otherProfile := testProfile
 	otherProfile.Blue = null.IntFrom(42)
@@ -106,21 +68,6 @@ func TestUpdateFields_WithChanges(t *testing.T) {
 	changedFields := findPartialUpdateFields(testProfile, otherProfile)
 	assert.Equal(t, 1, len(changedFields))
 	assertContains(t, changedFields, "Blue")
-}
-
-func TestUpdateFields_DifferentTypes(t *testing.T) {
-	testProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 235},
-		Blue:       null.IntFrom(1),
-		Brightness: null.IntFrom(2),
-		Red:        null.IntFrom(3),
-		Green:      null.IntFrom(4),
-	}
-	// have a different type
-	otherProfile := model.LedStrip{}
-	// there should be no changes
-	changedFields := findPartialUpdateFields(testProfile, otherProfile)
-	assert.Equal(t, 0, len(changedFields))
 }
 
 func assertContains(t *testing.T, s []string, e string) {
@@ -132,9 +79,27 @@ func assertContains(t *testing.T, s []string, e string) {
 	t.Errorf("expected %v to contain %v", s, e)
 }
 
-func initHandler() *GeneralDbHandler {
+func initHandler[T any](t *testing.T) *GeneralDbHandler[T] {
 	dbConf := config.DatabaseConfig{
 		Host: ":memory:",
 	}
-	return New(dbConf).(*GeneralDbHandler)
+	dbh := New[T](dbConf).(*GeneralDbHandler[T])
+	dbh.db.AutoMigrate(&model.ColorProfile{})
+	t.Cleanup(func() {
+		all, _ := dbh.GetAll()
+		for _, a := range all {
+			dbh.Delete(&a)
+		}
+	})
+	return dbh
+}
+
+func createTestProfile(id int64) model.ColorProfile {
+	return model.ColorProfile{
+		BaseModel:  model.BaseModel{ID: id},
+		Blue:       null.IntFrom(1),
+		Brightness: null.IntFrom(2),
+		Red:        null.IntFrom(3),
+		Green:      null.IntFrom(4),
+	}
 }

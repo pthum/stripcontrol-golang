@@ -7,7 +7,7 @@ import (
 )
 
 func TestStripEventJson(t *testing.T) {
-	stripSave := *NewStripEvent(null.IntFrom(234), Save).With(LedStrip{
+	stripSave := *NewStripEvent(null.IntFrom(234), Save).With(&LedStrip{
 		BaseModel: BaseModel{ID: 234},
 		Name:      "test",
 	})
@@ -26,7 +26,7 @@ func TestStripEventJson(t *testing.T) {
 		},
 		{
 			name: "save stripevent without profile",
-			input: *NewStripEvent(null.IntFrom(234), Save).With(LedStrip{
+			input: *NewStripEvent(null.IntFrom(234), Save).With(&LedStrip{
 				BaseModel: BaseModel{ID: 234},
 				Name:      "test",
 			}),

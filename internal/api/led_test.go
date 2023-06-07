@@ -20,7 +20,7 @@ type lhMocks struct {
 
 func TestLedRoutes(t *testing.T) {
 	bm := createBaseMocks(t)
-	routes := ledRoutes(bm.dbh, bm.mh)
+	routes := ledRoutes(bm.lsDbh, bm.cpDbh, bm.mh)
 	assert.Equal(t, 8, len(routes))
 }
 
@@ -42,17 +42,14 @@ func TestGetAllLedStrips(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mocks := createLEDHandlerMocks(t)
-
-			mocks.dbh.
+			destarr := []model.LedStrip{}
+			if tc.returnError == nil {
+				destarr = append(destarr, *tc.returnObj)
+			}
+			mocks.lsDbh.
 				EXPECT().
-				GetAll(mock.Anything).
-				Run(func(dest interface{}) {
-					destarr := dest.(*[]model.LedStrip)
-					if tc.returnError == nil {
-						*destarr = append(*destarr, *tc.returnObj)
-					}
-				}).
-				Return(tc.returnError).
+				GetAll().
+				Return(destarr, tc.returnError).
 				Once()
 
 			req, w := prepareHttpTest(http.MethodGet, ledstripPath, nil, nil)
@@ -149,14 +146,13 @@ func TestCreateLedStrip(t *testing.T) {
 			var newId int64
 			var body io.Reader
 			if tc.body != nil {
-				mocks.dbh.
+				mocks.lsDbh.
 					EXPECT().
 					Create(mock.Anything).
-					Run(func(input interface{}) {
-						in := input.(*model.LedStrip)
+					Run(func(input *model.LedStrip) {
 						// id should have been generated
-						assert.NotEqual(t, tc.body.ID, in.ID)
-						newId = in.ID
+						assert.NotEqual(t, tc.body.ID, input.ID)
+						newId = input.ID
 					}).
 					Return(tc.returnError).
 					Once()
@@ -230,7 +226,7 @@ func TestDeleteLedStrip(t *testing.T) {
 			mocks.expectDBStripGet(tc.getObj, tc.getError)
 
 			if tc.getError == nil {
-				mocks.dbh.
+				mocks.lsDbh.
 					EXPECT().
 					Delete(mock.Anything).
 					Return(tc.deleteError)
@@ -327,7 +323,7 @@ func TestUpdateLedStrip(t *testing.T) {
 			var body io.Reader
 			if tc.body != nil {
 				body = objToReader(t, tc.body)
-				mocks.dbh.
+				mocks.lsDbh.
 					EXPECT().
 					Update(dbObj, *tc.body).
 					Return(tc.updateError)
@@ -620,21 +616,15 @@ func (lhm *lhMocks) expectDBStripGet(getStrip *model.LedStrip, getStripError err
 	if getStrip != nil {
 		getStripIdStr = idStr(getStrip.ID)
 	}
-	lhm.dbh.
+	lhm.lsDbh.
 		EXPECT().
-		Get(getStripIdStr, mock.Anything).
-		Run(func(id string, dest interface{}) {
-			destobj := dest.(*model.LedStrip)
-			if getStripError == nil {
-				*destobj = *getStrip
-			}
-		}).
-		Return(getStripError).
+		Get(getStripIdStr).
+		Return(getStrip, getStripError).
 		Once()
 }
 
 func (lhm *lhMocks) expectDBStripSave(saveError error) {
-	lhm.dbh.
+	lhm.lsDbh.
 		EXPECT().
 		Save(mock.Anything).
 		Return(saveError)
@@ -671,8 +661,9 @@ func createLEDHandlerMocks(t *testing.T) *lhMocks {
 	return &lhMocks{
 		baseMocks: bm,
 		lh: &LEDHandlerImpl{
-			dbh: bm.dbh,
-			mh:  bm.mh,
+			dbh:   bm.lsDbh,
+			cpDbh: bm.cpDbh,
+			mh:    bm.mh,
 		},
 	}
 }

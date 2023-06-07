@@ -23,29 +23,28 @@ type CPHandler interface {
 	CreateColorProfile(w http.ResponseWriter, r *http.Request)
 }
 type CPHandlerImpl struct {
-	dbh database.DBHandler
+	dbh database.DBHandler[model.ColorProfile]
 	mh  messaging.EventHandler
 }
 
-func colorProfileRoutes(db database.DBHandler, mh messaging.EventHandler) []Route {
+func colorProfileRoutes(db database.DBHandler[model.ColorProfile], mh messaging.EventHandler) []Route {
 	h := CPHandlerImpl{
 		dbh: db,
 		mh:  mh,
 	}
 	return []Route{
-		{"GetColorprofiles", http.MethodGet, profilePath, h.GetAllColorProfiles},
-		{"CreateColorprofile", http.MethodPost, profilePath, h.CreateColorProfile},
-		{"GetColorprofile", http.MethodGet, profileIDPath, h.GetColorProfile},
-		{"UpdateColorprofile", http.MethodPut, profileIDPath, h.UpdateColorProfile},
-		{"DeleteColorprofile", http.MethodDelete, profileIDPath, h.DeleteColorProfile},
+		{http.MethodGet, profilePath, h.GetAllColorProfiles},
+		{http.MethodPost, profilePath, h.CreateColorProfile},
+		{http.MethodGet, profileIDPath, h.GetColorProfile},
+		{http.MethodPut, profileIDPath, h.UpdateColorProfile},
+		{http.MethodDelete, profileIDPath, h.DeleteColorProfile},
 	}
 }
 
 // GetAllColorProfiles get all color profiles
 func (h *CPHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Request) {
-	var profiles []model.ColorProfile
-
-	if err := h.dbh.GetAll(&profiles); err != nil {
+	profiles, err := h.dbh.GetAll()
+	if err != nil {
 		handleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -56,9 +55,8 @@ func (h *CPHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Reque
 // GetColorProfile get a specific color profile
 func (h *CPHandlerImpl) GetColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
-	var profile model.ColorProfile
-
-	if h.dbh.Get(getParam(r, "id"), &profile) != nil {
+	profile, err := h.dbh.Get(getParam(r, "id"))
+	if err != nil {
 		handleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
 	}
@@ -89,8 +87,8 @@ func (h *CPHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Reques
 // UpdateColorProfile update a color profile
 func (h *CPHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
-	var profile model.ColorProfile
-	if h.dbh.Get(getParam(r, "id"), &profile) != nil {
+	profile, err := h.dbh.Get(getParam(r, "id"))
+	if err != nil {
 		handleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
 	}
@@ -102,7 +100,7 @@ func (h *CPHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.dbh.Update(profile, input); err != nil {
+	if err := h.dbh.Update(*profile, input); err != nil {
 		handleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -116,13 +114,13 @@ func (h *CPHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Reques
 // DeleteColorProfile delete a color profile
 func (h *CPHandlerImpl) DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
-	var profile model.ColorProfile
-	if err := h.dbh.Get(getParam(r, "id"), &profile); err != nil {
+	profile, err := h.dbh.Get(getParam(r, "id"))
+	if err != nil {
 		handleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
 	}
 
-	if err := h.dbh.Delete(&profile); err != nil {
+	if err := h.dbh.Delete(profile); err != nil {
 		handleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}

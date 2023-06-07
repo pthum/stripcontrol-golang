@@ -14,6 +14,7 @@ type Config struct {
 	Server    ServerConfig    `yaml:"server"`
 	Database  DatabaseConfig  `yaml:"database"`
 	Messaging MessagingConfig `yaml:"messaging"`
+	CSV       CSVConfig       `yaml:"csv"`
 }
 
 type ServerConfig struct {
@@ -35,6 +36,10 @@ type MessagingConfig struct {
 	StripTopic   string `yaml:"striptopic" envconfig:"MQ_STRIPTOPIC"`
 	ProfileTopic string `yaml:"profiletopic" envconfig:"MQ_STRIPTOPIC"`
 	Disabled     bool   `yaml:"disabled" envconfig:"MQ_DISABLED"`
+}
+type CSVConfig struct {
+	DataDir  string `yaml:"datadir"`
+	Interval int    `yaml:"intervalmin"`
 }
 
 // InitConfig initialize the configuration
