@@ -12,7 +12,6 @@ import (
 // Config the configuration of this service
 type Config struct {
 	Server    ServerConfig    `yaml:"server"`
-	Database  DatabaseConfig  `yaml:"database"`
 	Messaging MessagingConfig `yaml:"messaging"`
 	CSV       CSVConfig       `yaml:"csv"`
 }
@@ -21,13 +20,6 @@ type ServerConfig struct {
 	Host string `yaml:"host" envconfig:"SERVER_HOST"`
 	Port string `yaml:"port" envconfig:"SERVER_PORT"`
 	Mode string `yaml:"mode" envconfig:"SERVER_MODE"`
-}
-
-type DatabaseConfig struct {
-	Username string `yaml:"user" envconfig:"DB_USERNAME"`
-	Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
-	Host     string `yaml:"host" envconfig:"DB_HOST"`
-	DbName   string `yaml:"name" envconfig:"DB_NAME"`
 }
 
 type MessagingConfig struct {

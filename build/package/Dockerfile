@@ -1,6 +1,6 @@
 FROM golang:1.20-alpine AS build_base
 
-RUN apk add --no-cache git gcc libc-dev sqlite
+RUN apk add --no-cache git
 
 # Set the Current Working Directory inside the container
 WORKDIR /tmp/stripcontrol-app
