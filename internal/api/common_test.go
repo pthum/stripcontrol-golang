@@ -58,6 +58,12 @@ type baseMocks struct {
 	mh    *mhm.EventHandler
 }
 
+func TestRouteHandlerName(t *testing.T) {
+	tmp := (&LEDHandlerImpl{}).GetAllLedStrips
+	r := &Route{"GET", "/", tmp}
+	assert.Equal(t, "GetAllLedStrips", r.HandlerName())
+}
+
 func createBaseMocks(t *testing.T) *baseMocks {
 	cpDbh := dbm.NewDBHandler[model.ColorProfile](t)
 	lsDbh := dbm.NewDBHandler[model.LedStrip](t)
