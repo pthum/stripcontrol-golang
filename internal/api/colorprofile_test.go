@@ -20,7 +20,7 @@ type cphMocks struct {
 
 func TestCPRoutes(t *testing.T) {
 	bm := createBaseMocks(t)
-	routes := colorProfileRoutes(bm.dbh, bm.mh)
+	routes := colorProfileRoutes(bm.cpDbh, bm.mh)
 	assert.Equal(t, 5, len(routes))
 }
 
@@ -42,17 +42,14 @@ func TestGetAllColorProfiles(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mocks := createCPHandlerMocks(t)
-
-			mocks.dbh.
+			destarr := []model.ColorProfile{}
+			if tc.returnError == nil {
+				destarr = append(destarr, *tc.returnObj)
+			}
+			mocks.cpDbh.
 				EXPECT().
-				GetAll(mock.Anything).
-				Run(func(dest interface{}) {
-					destarr := dest.(*[]model.ColorProfile)
-					if tc.returnError == nil {
-						*destarr = append(*destarr, *tc.returnObj)
-					}
-				}).
-				Return(tc.returnError).
+				GetAll().
+				Return(destarr, tc.returnError).
 				Once()
 
 			req, w := prepareHttpTest(http.MethodGet, profilePath, nil, nil)
@@ -139,14 +136,13 @@ func TestCreateColorProfile(t *testing.T) {
 			var newId int64
 			var body io.Reader
 			if tc.body != nil {
-				mocks.dbh.
+				mocks.cpDbh.
 					EXPECT().
 					Create(mock.Anything).
-					Run(func(input interface{}) {
-						in := input.(*model.ColorProfile)
+					Run(func(input *model.ColorProfile) {
 						// id should have been generated
-						assert.NotEqual(t, tc.body.ID, in.ID)
-						newId = in.ID
+						assert.NotEqual(t, tc.body.ID, input.ID)
+						newId = input.ID
 					}).
 					Return(tc.returnError).
 					Once()
@@ -205,7 +201,7 @@ func TestDeleteColorProfile(t *testing.T) {
 			mocks.expectDBProfileGet(tc.getObj, tc.getError)
 
 			if tc.getError == nil {
-				mocks.dbh.
+				mocks.cpDbh.
 					EXPECT().
 					Delete(mock.Anything).
 					Return(tc.deleteError)
@@ -272,7 +268,7 @@ func TestUpdateColorProfile(t *testing.T) {
 			var body io.Reader
 			if tc.body != nil {
 				body = objToReader(t, tc.body)
-				mocks.dbh.
+				mocks.cpDbh.
 					EXPECT().
 					Update(dbO, *tc.body).
 					Return(tc.updateError)
@@ -340,7 +336,7 @@ func createCPHandlerMocks(t *testing.T) *cphMocks {
 	return &cphMocks{
 		baseMocks: bm,
 		cph: &CPHandlerImpl{
-			dbh: bm.dbh,
+			dbh: bm.cpDbh,
 			mh:  bm.mh,
 		},
 	}

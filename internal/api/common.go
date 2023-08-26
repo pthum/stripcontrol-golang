@@ -6,6 +6,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"reflect"
+	"runtime"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/pthum/stripcontrol-golang/internal/model"
@@ -13,7 +16,6 @@ import (
 
 // Route a route definition
 type Route struct {
-	Name        string
 	Method      string
 	Pattern     string
 	HandlerFunc http.HandlerFunc
@@ -21,6 +23,13 @@ type Route struct {
 
 // Routes a route array definition
 type Routes []Route
+
+func (r *Route) HandlerName() string {
+	fullName := runtime.FuncForPC(reflect.ValueOf(r.HandlerFunc).Pointer()).Name()
+	split := strings.Split(fullName, ".")
+	shortName := split[len(split)-1]
+	return strings.Trim(shortName, "-fm")
+}
 
 // Common handler methods
 

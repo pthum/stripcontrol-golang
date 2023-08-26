@@ -21,15 +21,17 @@ func NewStripEvent(id null.Int, typ EventType) *StripEvent {
 	return evnt
 }
 
-func (pe *StripEvent) With(strip LedStrip) *StripEvent {
-	pe.Strip.Valid = true
-	pe.Strip.Strip.ID = strip.ID
-	pe.Strip.Strip.Name = strip.Name
-	pe.Strip.Strip.Enabled = strip.Enabled
-	pe.Strip.Strip.MisoPin = strip.MisoPin.Int64
-	pe.Strip.Strip.SclkPin = strip.SclkPin.Int64
-	pe.Strip.Strip.NumLeds = strip.NumLeds.Int64
-	pe.Strip.Strip.SpeedHz = strip.SpeedHz.Int64
+func (pe *StripEvent) With(strip *LedStrip) *StripEvent {
+	if strip != nil {
+		pe.Strip.Valid = true
+		pe.Strip.Strip.ID = strip.ID
+		pe.Strip.Strip.Name = strip.Name
+		pe.Strip.Strip.Enabled = strip.Enabled
+		pe.Strip.Strip.MisoPin = strip.MisoPin.Int64
+		pe.Strip.Strip.SclkPin = strip.SclkPin.Int64
+		pe.Strip.Strip.NumLeds = strip.NumLeds.Int64
+		pe.Strip.Strip.SpeedHz = strip.SpeedHz.Int64
+	}
 	return pe
 }
 func (pe *OptStrip) With(profile ColorProfile) *OptStrip {

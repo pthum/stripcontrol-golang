@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -9,20 +8,21 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pthum/stripcontrol-golang/internal/database"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
+	"github.com/pthum/stripcontrol-golang/internal/model"
 )
 
 // NewRouter initializes a new router, setup with all routes
-func NewRouter(db database.DBHandler, mh messaging.EventHandler, enableDebug bool) *mux.Router {
+func NewRouter(cpdb database.DBHandler[model.ColorProfile], lsdb database.DBHandler[model.LedStrip], mh messaging.EventHandler, enableDebug bool) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 
 	var routes []Route
-	var cproutes = colorProfileRoutes(db, mh)
-	var lroutes = ledRoutes(db, mh)
+	var cproutes = colorProfileRoutes(cpdb, mh)
+	var lroutes = ledRoutes(lsdb, cpdb, mh)
 	routes = append(routes, cproutes...)
 	routes = append(routes, lroutes...)
 
 	for _, route := range routes {
-		fmt.Printf("appending \"%v\": %v %v \n", route.Name, route.Method, route.Pattern)
+		log.Printf("appending \"%v\": %v %v \n", route.HandlerName(), route.Method, route.Pattern)
 		var handler http.Handler
 		handler = route.HandlerFunc
 		if enableDebug {
@@ -32,7 +32,7 @@ func NewRouter(db database.DBHandler, mh messaging.EventHandler, enableDebug boo
 		router.
 			Methods(route.Method).
 			Path(route.Pattern).
-			Name(route.Name).
+			Name(route.HandlerName()).
 			Handler(handler)
 	}
 

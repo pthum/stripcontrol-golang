@@ -1,6 +1,6 @@
-FROM golang:1.19-alpine AS build_base
+FROM golang:1.20-alpine AS build_base
 
-RUN apk add --no-cache git gcc libc-dev sqlite
+RUN apk add --no-cache git
 
 # Set the Current Working Directory inside the container
 WORKDIR /tmp/stripcontrol-app
@@ -12,7 +12,7 @@ RUN go mod download && go mod tidy
 
 COPY . .
 
-FROM build_base as test
+FROM build_base AS test
 # switch to head instead of latest release due to https://github.com/jstemmer/go-junit-report/issues/138
 RUN go install github.com/jstemmer/go-junit-report/v2@bfac3ec01f0cf6ed0dbff9f5f2cb48eb04db38a7 \
    && go install github.com/t-yuki/gocover-cobertura@latest \
@@ -22,7 +22,7 @@ RUN go install github.com/jstemmer/go-junit-report/v2@bfac3ec01f0cf6ed0dbff9f5f2
 ENTRYPOINT [ "/tmp/stripcontrol-app/build/testentrypoint.sh" ]
 
 
-FROM alpine:3.17 as builder
+FROM alpine:3.18 AS builder
 WORKDIR /app
 COPY ./out/ ./
 RUN apkArch="$(apk --print-arch)"; \
@@ -30,7 +30,7 @@ RUN apkArch="$(apk --print-arch)"; \
     mv "stripcontrol-app-$apkArch" "stripcontrol-app"
 
 # Start fresh from a smaller image
-FROM alpine:3.17 as finalimage
+FROM alpine:3.18 AS finalimage
 WORKDIR /app
 RUN apk add --no-cache ca-certificates
 

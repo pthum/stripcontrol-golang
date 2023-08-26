@@ -12,8 +12,8 @@ import (
 // Config the configuration of this service
 type Config struct {
 	Server    ServerConfig    `yaml:"server"`
-	Database  DatabaseConfig  `yaml:"database"`
 	Messaging MessagingConfig `yaml:"messaging"`
+	CSV       CSVConfig       `yaml:"csv"`
 }
 
 type ServerConfig struct {
@@ -22,19 +22,16 @@ type ServerConfig struct {
 	Mode string `yaml:"mode" envconfig:"SERVER_MODE"`
 }
 
-type DatabaseConfig struct {
-	Username string `yaml:"user" envconfig:"DB_USERNAME"`
-	Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
-	Host     string `yaml:"host" envconfig:"DB_HOST"`
-	DbName   string `yaml:"name" envconfig:"DB_NAME"`
-}
-
 type MessagingConfig struct {
 	Host         string `yaml:"host" envconfig:"MQ_HOST"`
 	Port         string `yaml:"port" envconfig:"MQ_PORT"`
 	StripTopic   string `yaml:"striptopic" envconfig:"MQ_STRIPTOPIC"`
 	ProfileTopic string `yaml:"profiletopic" envconfig:"MQ_STRIPTOPIC"`
 	Disabled     bool   `yaml:"disabled" envconfig:"MQ_DISABLED"`
+}
+type CSVConfig struct {
+	DataDir  string `yaml:"datadir"`
+	Interval int    `yaml:"intervalmin"`
 }
 
 // InitConfig initialize the configuration

@@ -53,16 +53,25 @@ type updateTest[T any] struct {
 type uv map[string]string
 
 type baseMocks struct {
-	dbh *dbm.DBHandler
-	mh  *mhm.EventHandler
+	cpDbh *dbm.DBHandler[model.ColorProfile]
+	lsDbh *dbm.DBHandler[model.LedStrip]
+	mh    *mhm.EventHandler
+}
+
+func TestRouteHandlerName(t *testing.T) {
+	tmp := (&LEDHandlerImpl{}).GetAllLedStrips
+	r := &Route{"GET", "/", tmp}
+	assert.Equal(t, "GetAllLedStrips", r.HandlerName())
 }
 
 func createBaseMocks(t *testing.T) *baseMocks {
-	dbh := dbm.NewDBHandler(t)
+	cpDbh := dbm.NewDBHandler[model.ColorProfile](t)
+	lsDbh := dbm.NewDBHandler[model.LedStrip](t)
 	mh := mhm.NewEventHandler(t)
 	return &baseMocks{
-		dbh: dbh,
-		mh:  mh,
+		cpDbh: cpDbh,
+		lsDbh: lsDbh,
+		mh:    mh,
 	}
 }
 
@@ -71,16 +80,10 @@ func (bm *baseMocks) expectDBProfileGet(getStrip *model.ColorProfile, getError e
 	if getStrip != nil {
 		getStripIdStr = idStr(getStrip.ID)
 	}
-	bm.dbh.
+	bm.cpDbh.
 		EXPECT().
-		Get(getStripIdStr, mock.Anything).
-		Run(func(id string, dest interface{}) {
-			destobj := dest.(*model.ColorProfile)
-			if getError == nil {
-				*destobj = *getStrip
-			}
-		}).
-		Return(getError).
+		Get(getStripIdStr).
+		Return(getStrip, getError).
 		Once()
 }
 
