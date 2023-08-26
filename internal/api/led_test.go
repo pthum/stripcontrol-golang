@@ -162,7 +162,7 @@ func TestCreateLedStrip(t *testing.T) {
 					Once()
 				body = objToReader(t, tc.body)
 				if tc.returnError == nil {
-					mocks.expectPublishStripEvent(t, model.Save, newId, true, tc.publishError)
+					mocks.expectPublishStripEvent(t, model.Save, newId, true, false, tc.publishError)
 				}
 			}
 
@@ -235,7 +235,7 @@ func TestDeleteLedStrip(t *testing.T) {
 					Delete(mock.Anything).
 					Return(tc.deleteError)
 				if tc.deleteError == nil {
-					mocks.expectPublishStripEvent(t, model.Delete, tc.getObj.ID, false, tc.publishError)
+					mocks.expectPublishStripEvent(t, model.Delete, tc.getObj.ID, false, false, tc.publishError)
 				}
 			}
 
@@ -265,12 +265,24 @@ func TestUpdateLedStrip(t *testing.T) {
 		NumLeds:     null.IntFrom(99),
 		SclkPin:     null.IntFrom(99),
 		SpeedHz:     null.IntFrom(80001),
+		ProfileID:   null.IntFrom(15),
+	}
+
+	inputObj := createValidDummyStrip()
+	inputObj.ProfileID = null.IntFrom(15)
+
+	fakeProfile := model.ColorProfile{
+		BaseModel:  model.BaseModel{ID: 15},
+		Red:        null.IntFrom(100),
+		Green:      null.IntFrom(100),
+		Blue:       null.IntFrom(100),
+		Brightness: null.IntFrom(2),
 	}
 
 	tests := []updateTest[model.LedStrip]{
 		{
 			name:           "success case",
-			body:           createValidDummyStrip(),
+			body:           inputObj,
 			getError:       nil,
 			updateError:    nil,
 			expectedStatus: http.StatusOK,
@@ -291,7 +303,7 @@ func TestUpdateLedStrip(t *testing.T) {
 		},
 		{
 			name:        "error on update",
-			body:        createValidDummyStrip(),
+			body:        inputObj,
 			getError:    nil,
 			updateError: errors.New("update failed"),
 			// we ignore errors on update for the sake of performance, see comment in UpdateLedStrip
@@ -299,7 +311,7 @@ func TestUpdateLedStrip(t *testing.T) {
 		},
 		{
 			name:         "publish error",
-			body:         createValidDummyStrip(),
+			body:         inputObj,
 			publishError: errors.New("publish error"),
 			// we ignore errors on update for the sake of performance, see comment in UpdateLedStrip
 			expectedStatus: http.StatusOK,
@@ -320,7 +332,8 @@ func TestUpdateLedStrip(t *testing.T) {
 					Update(dbObj, *tc.body).
 					Return(tc.updateError)
 				if tc.updateError == nil {
-					mocks.expectPublishStripEvent(t, model.Save, tc.body.ID, true, tc.publishError)
+					mocks.expectPublishStripEvent(t, model.Save, tc.body.ID, true, true, tc.publishError)
+					mocks.expectDBProfileGet(&fakeProfile, nil)
 				}
 			}
 
@@ -513,7 +526,7 @@ func TestUpdateProfileForLedStrip(t *testing.T) {
 					mocks.expectDBStripSave(tc.saveError)
 
 					if tc.saveError == nil {
-						mocks.expectPublishStripEvent(t, model.Save, tc.getStrip.ID, true, tc.publishError)
+						mocks.expectPublishStripEvent(t, model.Save, tc.getStrip.ID, true, true, tc.publishError)
 					}
 				}
 			}
@@ -587,7 +600,7 @@ func TestRemoveProfileForLedStrip(t *testing.T) {
 			if tc.getStripError == nil {
 				mocks.expectDBStripSave(tc.saveError)
 				if tc.saveError == nil {
-					mocks.expectPublishStripEvent(t, model.Save, tc.getStrip.ID, true, tc.publishError)
+					mocks.expectPublishStripEvent(t, model.Save, tc.getStrip.ID, true, false, tc.publishError)
 				}
 			}
 
@@ -627,7 +640,7 @@ func (lhm *lhMocks) expectDBStripSave(saveError error) {
 		Return(saveError)
 }
 
-func (lhm *lhMocks) expectPublishStripEvent(t *testing.T, typ model.EventType, id int64, valid bool, publishError error) {
+func (lhm *lhMocks) expectPublishStripEvent(t *testing.T, typ model.EventType, id int64, valid bool, expectProfile bool, publishError error) {
 	lhm.mh.
 		EXPECT().
 		PublishStripEvent(mock.Anything).
@@ -635,7 +648,7 @@ func (lhm *lhMocks) expectPublishStripEvent(t *testing.T, typ model.EventType, i
 			assert.Equal(t, typ, event.Type)
 			assert.Equal(t, id, event.ID.Int64)
 			assert.Equal(t, valid, event.Strip.Valid)
-
+			assert.Equal(t, expectProfile, event.Strip.Strip.Profile.Valid)
 		}).
 		Return(publishError)
 }
