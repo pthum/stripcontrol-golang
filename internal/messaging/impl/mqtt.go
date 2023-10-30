@@ -80,9 +80,10 @@ func buildClientOpts(cfg config.MessagingConfig) *mqtt.ClientOptions {
 }
 
 // Close closes connections to message broker
-func (m *mqttHandler) Close() {
+func (m *mqttHandler) Shutdown() error {
 	m.mqclient.Disconnect(100)
 	log.Print("message broker connection gracefully closed")
+	return nil
 }
 
 // PublishStripEvent publishes a strip event

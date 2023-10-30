@@ -9,6 +9,7 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/database"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
 )
 
 const (
@@ -30,12 +31,18 @@ type LEDHandlerImpl struct {
 	mh    messaging.EventHandler
 }
 
-func ledRoutes(lsdb database.DBHandler[model.LedStrip], cpdb database.DBHandler[model.ColorProfile], mh messaging.EventHandler) []Route {
-	lh := LEDHandlerImpl{
+func NewLEDHandler(i *do.Injector) (LEDHandler, error) {
+	lsdb := do.MustInvoke[database.DBHandler[model.LedStrip]](i)
+	cpdb := do.MustInvoke[database.DBHandler[model.ColorProfile]](i)
+	mh := do.MustInvoke[messaging.EventHandler](i)
+	return &LEDHandlerImpl{
 		dbh:   lsdb,
 		cpDbh: cpdb,
 		mh:    mh,
-	}
+	}, nil
+}
+
+func (lh *LEDHandlerImpl) ledRoutes() []Route {
 	return []Route{
 		{http.MethodGet, ledstripPath, lh.GetAllLedStrips},
 		{http.MethodPost, ledstripPath, lh.CreateLedStrip},

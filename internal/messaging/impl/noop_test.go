@@ -9,7 +9,8 @@ import (
 
 func TestNoOpClose(t *testing.T) {
 	handler := getTestInstance()
-	handler.Close()
+	err := handler.Shutdown()
+	assert.NoError(t, err)
 }
 
 func TestPublishStripEvent(t *testing.T) {

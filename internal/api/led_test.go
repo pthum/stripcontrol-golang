@@ -9,6 +9,7 @@ import (
 
 	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -19,8 +20,8 @@ type lhMocks struct {
 }
 
 func TestLedRoutes(t *testing.T) {
-	bm := createBaseMocks(t)
-	routes := ledRoutes(bm.lsDbh, bm.cpDbh, bm.mh)
+	mcks := createLEDHandlerMocks(t)
+	routes := mcks.lh.ledRoutes()
 	assert.Equal(t, 8, len(routes))
 }
 
@@ -657,13 +658,12 @@ func createValidDummyStrip() *model.LedStrip {
 }
 
 func createLEDHandlerMocks(t *testing.T) *lhMocks {
-	bm := createBaseMocks(t)
+	i := do.New()
+	bm := createBaseMocks(i, t)
+	lh, err := NewLEDHandler(i)
+	assert.NoError(t, err)
 	return &lhMocks{
 		baseMocks: bm,
-		lh: &LEDHandlerImpl{
-			dbh:   bm.lsDbh,
-			cpDbh: bm.cpDbh,
-			mh:    bm.mh,
-		},
+		lh:        lh.(*LEDHandlerImpl),
 	}
 }

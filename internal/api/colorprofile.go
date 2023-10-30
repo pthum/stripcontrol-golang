@@ -8,6 +8,7 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/database"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 type CPHandler interface {
 	GetAllColorProfiles(w http.ResponseWriter, r *http.Request)
 	GetColorProfile(w http.ResponseWriter, r *http.Request)
-	UpdateLedStrip(w http.ResponseWriter, r *http.Request)
+	UpdateColorProfile(w http.ResponseWriter, r *http.Request)
 	CreateColorProfile(w http.ResponseWriter, r *http.Request)
 }
 type CPHandlerImpl struct {
@@ -27,11 +28,16 @@ type CPHandlerImpl struct {
 	mh  messaging.EventHandler
 }
 
-func colorProfileRoutes(db database.DBHandler[model.ColorProfile], mh messaging.EventHandler) []Route {
-	h := CPHandlerImpl{
+func NewCPHandler(i *do.Injector) (CPHandler, error) {
+	db := do.MustInvoke[database.DBHandler[model.ColorProfile]](i)
+	mh := do.MustInvoke[messaging.EventHandler](i)
+	return &CPHandlerImpl{
 		dbh: db,
 		mh:  mh,
-	}
+	}, nil
+}
+
+func (h *CPHandlerImpl) colorProfileRoutes() []Route {
 	return []Route{
 		{http.MethodGet, profilePath, h.GetAllColorProfiles},
 		{http.MethodPost, profilePath, h.CreateColorProfile},

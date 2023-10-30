@@ -9,6 +9,7 @@ import (
 
 	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -19,8 +20,8 @@ type cphMocks struct {
 }
 
 func TestCPRoutes(t *testing.T) {
-	bm := createBaseMocks(t)
-	routes := colorProfileRoutes(bm.cpDbh, bm.mh)
+	mcks := createCPHandlerMocks(t)
+	routes := mcks.cph.colorProfileRoutes()
 	assert.Equal(t, 5, len(routes))
 }
 
@@ -332,12 +333,12 @@ func createProfile(id, red, green, blue, brightness int64) *model.ColorProfile {
 }
 
 func createCPHandlerMocks(t *testing.T) *cphMocks {
-	bm := createBaseMocks(t)
+	i := do.New()
+	bm := createBaseMocks(i, t)
+	cph, err := NewCPHandler(i)
+	assert.NoError(t, err)
 	return &cphMocks{
 		baseMocks: bm,
-		cph: &CPHandlerImpl{
-			dbh: bm.cpDbh,
-			mh:  bm.mh,
-		},
+		cph:       cph.(*CPHandlerImpl),
 	}
 }

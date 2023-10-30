@@ -8,8 +8,9 @@ import (
 type NoOpEventHandler struct {
 }
 
-func (m *NoOpEventHandler) Close() {
+func (m *NoOpEventHandler) Shutdown() error {
 	//no op
+	return nil
 }
 
 func (m *NoOpEventHandler) PublishStripEvent(event *model.StripEvent) error {

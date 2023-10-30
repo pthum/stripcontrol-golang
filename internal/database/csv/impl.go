@@ -15,6 +15,7 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/config"
 	"github.com/pthum/stripcontrol-golang/internal/database"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
 )
 
 // interface guard
@@ -33,6 +34,17 @@ func NewHandler[T any](cfg *config.CSVConfig) *CSVHandler[T] {
 	}
 	ch.load()
 	return ch
+}
+func NewHandlerI[T any](inj *do.Injector) (database.DBHandler[T], error) {
+	s := do.MustInvoke[*gocron.Scheduler](inj)
+	acfg := do.MustInvoke[*config.Config](inj)
+	ch := &CSVHandler[T]{
+		cfg:  &acfg.CSV,
+		iMap: NewSyncMap[string, T](),
+	}
+	ch.load()
+	ch.ScheduleJob(s)
+	return ch, nil
 }
 
 func (c *CSVHandler[T]) GetAll() ([]T, error) {
@@ -80,6 +92,10 @@ func (c *CSVHandler[T]) Delete(input *T) (err error) {
 
 func (c *CSVHandler[T]) Close() {
 	// nothing to close
+}
+
+func (c *CSVHandler[T]) Shutdown() error {
+	return nil
 }
 
 func (c *CSVHandler[T]) ScheduleJob(s *gocron.Scheduler) {

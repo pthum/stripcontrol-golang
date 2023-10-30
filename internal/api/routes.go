@@ -6,18 +6,17 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pthum/stripcontrol-golang/internal/database"
-	"github.com/pthum/stripcontrol-golang/internal/messaging"
-	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
 )
 
 // NewRouter initializes a new router, setup with all routes
-func NewRouter(cpdb database.DBHandler[model.ColorProfile], lsdb database.DBHandler[model.LedStrip], mh messaging.EventHandler, enableDebug bool) *mux.Router {
+func NewRouter(i *do.Injector, enableDebug bool) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
-
+	cph := do.MustInvoke[CPHandler](i).(*CPHandlerImpl)
+	lh := do.MustInvoke[LEDHandler](i).(*LEDHandlerImpl)
 	var routes []Route
-	var cproutes = colorProfileRoutes(cpdb, mh)
-	var lroutes = ledRoutes(lsdb, cpdb, mh)
+	var cproutes = cph.colorProfileRoutes()
+	var lroutes = lh.ledRoutes()
 	routes = append(routes, cproutes...)
 	routes = append(routes, lroutes...)
 

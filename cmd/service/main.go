@@ -16,6 +16,8 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/database/csv"
 	messagingimpl "github.com/pthum/stripcontrol-golang/internal/messaging/impl"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/telegram"
+	"github.com/samber/do"
 
 	flag "github.com/spf13/pflag"
 )
@@ -35,19 +37,19 @@ func main() {
 	}
 	var enableDebug = cfg.Server.Mode != "release"
 
-	s := gocron.NewScheduler(time.UTC)
-	cpDbh := csv.NewHandler[model.ColorProfile](&cfg.CSV)
-	defer cpDbh.Close()
-	lsDbh := csv.NewHandler[model.LedStrip](&cfg.CSV)
-	defer lsDbh.Close()
+	inj := do.New()
+	defer inj.Shutdown()
+	do.ProvideValue(inj, cfg)
+	do.Provide(inj, newScheduler)
+	do.Provide(inj, csv.NewHandlerI[model.ColorProfile])
+	do.Provide(inj, csv.NewHandlerI[model.LedStrip])
+	do.Provide(inj, messagingimpl.New)
+	do.Provide(inj, api.NewCPHandler)
 
-	cpDbh.ScheduleJob(s)
-	lsDbh.ScheduleJob(s)
+	tgH := telegram.NewHandler(cfg.Telegram)
+	go tgH.Handle()
 
-	mh := messagingimpl.New(cfg.Messaging)
-	defer mh.Close()
-
-	router := api.NewRouter(cpDbh, lsDbh, mh, enableDebug)
+	router := api.NewRouter(inj, enableDebug)
 
 	// Listen and serve on 0.0.0.0:8080
 	serve := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -62,10 +64,7 @@ func main() {
 			log.Fatalf("listen:%+s\n", err)
 		}
 	}()
-
-	// start scheduler
-	s.StartAsync()
-
+	scheduleJobs(inj)
 	// Create channel for shutdown signals.
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -81,4 +80,14 @@ func main() {
 	} else {
 		log.Println("Server gracefully stopped")
 	}
+}
+
+func newScheduler(inj *do.Injector) (*gocron.Scheduler, error) {
+	return gocron.NewScheduler(time.UTC), nil
+}
+
+func scheduleJobs(inj *do.Injector) {
+	s := do.MustInvoke[*gocron.Scheduler](inj)
+	// start scheduler
+	s.StartAsync()
 }

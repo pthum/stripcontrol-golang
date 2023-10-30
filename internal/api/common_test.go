@@ -10,9 +10,12 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/pthum/stripcontrol-golang/internal/database"
 	dbm "github.com/pthum/stripcontrol-golang/internal/database/mocks"
+	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	mhm "github.com/pthum/stripcontrol-golang/internal/messaging/mocks"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -64,10 +67,13 @@ func TestRouteHandlerName(t *testing.T) {
 	assert.Equal(t, "GetAllLedStrips", r.HandlerName())
 }
 
-func createBaseMocks(t *testing.T) *baseMocks {
+func createBaseMocks(i *do.Injector, t *testing.T) *baseMocks {
 	cpDbh := dbm.NewDBHandler[model.ColorProfile](t)
 	lsDbh := dbm.NewDBHandler[model.LedStrip](t)
+	do.ProvideValue[database.DBHandler[model.ColorProfile]](i, cpDbh)
+	do.ProvideValue[database.DBHandler[model.LedStrip]](i, lsDbh)
 	mh := mhm.NewEventHandler(t)
+	do.ProvideValue[messaging.EventHandler](i, mh)
 	return &baseMocks{
 		cpDbh: cpDbh,
 		lsDbh: lsDbh,

@@ -80,7 +80,7 @@ func TestMqttPublishStripEventWithError(t *testing.T) {
 
 func TestMqttClose(t *testing.T) {
 	handler := createMqttMocks(t, nil)
-	handler.Close()
+	handler.Shutdown()
 	assert.False(t, handler.mqclient.IsConnected())
 }
 
