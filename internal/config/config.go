@@ -14,6 +14,7 @@ type Config struct {
 	Server    ServerConfig    `yaml:"server"`
 	Messaging MessagingConfig `yaml:"messaging"`
 	CSV       CSVConfig       `yaml:"csv"`
+	Telegram  TelegramConfig  `yaml:"telegram"`
 }
 
 type ServerConfig struct {
@@ -32,6 +33,11 @@ type MessagingConfig struct {
 type CSVConfig struct {
 	DataDir  string `yaml:"datadir"`
 	Interval int    `yaml:"intervalmin"`
+}
+
+type TelegramConfig struct {
+	BotKey         string  `yaml:"apikey" envconfig:"TG_BOT_APIKEY"`
+	AllowedUserIDs []int64 `yaml:"allowedusers" envconfig:"TG_ALLOWED_USERS"`
 }
 
 // InitConfig initialize the configuration

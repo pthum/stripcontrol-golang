@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.2
 	github.com/go-co-op/gocron v1.28.2
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gocarina/gocsv v0.0.0-20230513223533-9ddd7fd60602
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
