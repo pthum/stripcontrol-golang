@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -14,19 +13,13 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type cphMocks struct {
+type cphITMocks struct {
 	*baseMocks
 	cph *CPHandlerImpl
 }
 
-func TestCPRoutes(t *testing.T) {
-	mcks := createCPHandlerMocks(t)
-	routes := mcks.cph.colorProfileRoutes()
-	assert.Equal(t, 5, len(routes))
-}
-
-func TestGetAllColorProfiles(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestGetAllColorProfilesIT(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	expRet := createDummyProfile()
 	destarr := []model.ColorProfile{*expRet}
 	mocks.cpDbh.
@@ -46,8 +39,8 @@ func TestGetAllColorProfiles(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestGetAllColorProfiles_GetError(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestGetAllColorProfilesIT_GetError(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	destarr := []model.ColorProfile{}
 	mocks.cpDbh.
 		EXPECT().
@@ -64,8 +57,8 @@ func TestGetAllColorProfiles_GetError(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
-func TestGetColorProfile(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestGetColorProfileIT(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	retObj := createDummyProfile()
 	idS := idStringOrDefault(retObj, "9000")
 	mocks.expectDBProfileGet(retObj, nil)
@@ -81,8 +74,8 @@ func TestGetColorProfile(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestGetColorProfile_GetError(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestGetColorProfileIT_GetError(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	retObj := createDummyProfile()
 	idS := idStringOrDefault(retObj, "9000")
 	mocks.expectDBProfileGet(retObj, errors.New("not found"))
@@ -95,8 +88,8 @@ func TestGetColorProfile_GetError(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
-func TestCreateColorProfile(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestCreateColorProfileIT(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	inBody := createDummyProfile()
 	var newId int64
 	mocks.cpDbh.
@@ -128,20 +121,8 @@ func TestCreateColorProfile(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
-func TestCreateColorProfile_MissingBody(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
-	var body io.Reader
-	req, w := prepareHttpTest(http.MethodPost, profilePath, nil, body)
-
-	mocks.cph.CreateColorProfile(w, req)
-
-	res := w.Result()
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
-func TestCreateColorProfile_SaveError(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestCreateColorProfileIT_SaveError(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	inBody := createDummyProfile()
 	mocks.cpDbh.
 		EXPECT().
@@ -162,8 +143,8 @@ func TestCreateColorProfile_SaveError(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
-func TestDeleteColorProfile(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestDeleteColorProfileIT(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	getObj := createDummyProfile()
 	mocks.expectDBProfileGet(getObj, nil)
 
@@ -187,8 +168,8 @@ func TestDeleteColorProfile(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 }
 
-func TestDeleteColorProfile_MissingDBProfile(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestDeleteColorProfileIT_MissingDBProfile(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	getObj := createDummyProfile()
 	mocks.expectDBProfileGet(nil, errors.New("not found"))
 
@@ -203,8 +184,8 @@ func TestDeleteColorProfile_MissingDBProfile(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
-func TestDeleteColorProfile_DeleteError(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestDeleteColorProfileIT_DeleteError(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	getObj := createDummyProfile()
 	mocks.expectDBProfileGet(getObj, nil)
 
@@ -224,8 +205,8 @@ func TestDeleteColorProfile_DeleteError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func TestUpdateColorProfile(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestUpdateColorProfileIT(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	inBody := createDummyProfile()
 	body := objToReader(t, inBody)
 	dbO := *createProfile(105, 100, 100, 100, 2)
@@ -251,8 +232,8 @@ func TestUpdateColorProfile(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestUpdateColorProfile_MissingDBProfile(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestUpdateColorProfileIT_MissingDBProfile(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	inBody := createDummyProfile()
 	body := objToReader(t, inBody)
 	dbO := *createProfile(105, 100, 100, 100, 2)
@@ -269,24 +250,8 @@ func TestUpdateColorProfile_MissingDBProfile(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
-func TestUpdateColorProfile_MissingBody(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
-	var body io.Reader
-	dbO := *createProfile(105, 100, 100, 100, 2)
-
-	idS := idStr(dbO.ID)
-	req, w := prepareHttpTest(http.MethodPut, profileIDPath, uv{"id": idS}, body)
-
-	mocks.cph.UpdateColorProfile(w, req)
-
-	res := w.Result()
-	defer res.Body.Close()
-
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-}
-
-func TestUpdateColorProfile_UpdateError(t *testing.T) {
-	mocks := createCPHandlerMocks(t)
+func TestUpdateColorProfileIT_UpdateError(t *testing.T) {
+	mocks := createCPHandlerITMocks(t)
 	inBody := createDummyProfile()
 	body := objToReader(t, inBody)
 	dbO := *createProfile(105, 100, 100, 100, 2)
@@ -311,7 +276,7 @@ func TestUpdateColorProfile_UpdateError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func (chm *cphMocks) expectPublishProfileEvent(t *testing.T, typ model.EventType, id int64, body *model.ColorProfile) {
+func (chm *cphITMocks) expectPublishProfileEvent(t *testing.T, typ model.EventType, id int64, body *model.ColorProfile) {
 	chm.mh.
 		EXPECT().
 		PublishProfileEvent(mock.Anything).
@@ -348,12 +313,12 @@ func createProfile(id, red, green, blue, brightness int64) *model.ColorProfile {
 	}
 }
 
-func createCPHandlerMocks(t *testing.T) *cphMocks {
+func createCPHandlerITMocks(t *testing.T) *cphITMocks {
 	i := do.New()
 	bm := createBaseMocks(i, t)
 	cph, err := NewCPHandler(i)
 	assert.NoError(t, err)
-	return &cphMocks{
+	return &cphITMocks{
 		baseMocks: bm,
 		cph:       cph.(*CPHandlerImpl),
 	}
