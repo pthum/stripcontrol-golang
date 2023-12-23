@@ -15,6 +15,7 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	mhm "github.com/pthum/stripcontrol-golang/internal/messaging/mocks"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
 	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -74,6 +75,9 @@ func createBaseMocks(i *do.Injector, t *testing.T) *baseMocks {
 	do.ProvideValue[database.DBHandler[model.LedStrip]](i, lsDbh)
 	mh := mhm.NewEventHandler(t)
 	do.ProvideValue[messaging.EventHandler](i, mh)
+	cps, err := service.NewCPService(i)
+	assert.NoError(t, err)
+	do.ProvideValue(i, cps)
 	return &baseMocks{
 		cpDbh: cpDbh,
 		lsDbh: lsDbh,

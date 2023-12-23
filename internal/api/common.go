@@ -50,6 +50,14 @@ func getParam(r *http.Request, param string) (paramValue string) {
 	return
 }
 
+func handleErr(w *http.ResponseWriter, err error) {
+	if aerr, ok := err.(*model.AppError); ok {
+		handleError(w, aerr.Code, aerr.Error())
+		return
+	}
+	handleError(w, http.StatusInternalServerError, err.Error())
+}
+
 // HandleError handles an error
 func handleError(w *http.ResponseWriter, status int, message string) {
 	handleJSON(w, status, H{"error": message})
