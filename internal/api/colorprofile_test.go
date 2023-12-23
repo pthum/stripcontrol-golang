@@ -16,7 +16,7 @@ import (
 
 type cphMocks struct {
 	cps *servicemocks.CPService
-	cph *CPHandlerImpl
+	cph *cpHandlerImpl
 }
 
 func TestCPRoutes(t *testing.T) {
@@ -116,7 +116,6 @@ func TestCreateColorProfile(t *testing.T) {
 
 	res := w.Result()
 	defer res.Body.Close()
-
 	expectedObj := inBody
 	var result model.ColorProfile
 	bodyToObj(t, res, &result)
@@ -164,7 +163,6 @@ func TestDeleteColorProfile(t *testing.T) {
 		EXPECT().
 		DeleteColorProfile(mock.Anything).
 		Return(nil)
-
 	idS := idStringOrDefault(getObj, "9000")
 	req, w := prepareHttpTest(http.MethodDelete, profileIDPath, uv{"id": idS}, nil)
 
@@ -179,12 +177,10 @@ func TestDeleteColorProfile(t *testing.T) {
 func TestDeleteColorProfile_DeleteError(t *testing.T) {
 	mocks := createCPHandlerMocks(t)
 	getObj := createDummyProfile()
-
 	mocks.cps.
 		EXPECT().
 		DeleteColorProfile(mock.Anything).
 		Return(model.NewAppErr(400, errors.New("delete error")))
-
 	idS := idStringOrDefault(getObj, "9000")
 	req, w := prepareHttpTest(http.MethodDelete, profileIDPath, uv{"id": idS}, nil)
 
@@ -213,8 +209,6 @@ func TestUpdateColorProfile(t *testing.T) {
 	mocks.cph.UpdateColorProfile(w, req)
 
 	res := w.Result()
-	defer res.Body.Close()
-
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
@@ -263,6 +257,6 @@ func createCPHandlerMocks(t *testing.T) *cphMocks {
 	assert.NoError(t, err)
 	return &cphMocks{
 		cps: cps,
-		cph: cph.(*CPHandlerImpl),
+		cph: cph.(*cpHandlerImpl),
 	}
 }

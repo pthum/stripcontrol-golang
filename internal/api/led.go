@@ -26,7 +26,7 @@ type LEDHandler interface {
 	UpdateLedStrip(w http.ResponseWriter, r *http.Request)
 }
 
-type LEDHandlerImpl struct {
+type ledHandlerImpl struct {
 	dbh   database.DBHandler[model.LedStrip]
 	cpDbh database.DBHandler[model.ColorProfile]
 	mh    messaging.EventHandler
@@ -38,7 +38,7 @@ func NewLEDHandler(i *do.Injector) (LEDHandler, error) {
 	cpdb := do.MustInvoke[database.DBHandler[model.ColorProfile]](i)
 	mh := do.MustInvoke[messaging.EventHandler](i)
 	lsvc := do.MustInvoke[service.LEDService](i)
-	return &LEDHandlerImpl{
+	return &ledHandlerImpl{
 		dbh:   lsdb,
 		cpDbh: cpdb,
 		mh:    mh,
@@ -46,7 +46,7 @@ func NewLEDHandler(i *do.Injector) (LEDHandler, error) {
 	}, nil
 }
 
-func (lh *LEDHandlerImpl) ledRoutes() []Route {
+func (lh *ledHandlerImpl) ledRoutes() []Route {
 	return []Route{
 		{http.MethodGet, ledstripPath, lh.GetAllLedStrips},
 		{http.MethodPost, ledstripPath, lh.CreateLedStrip},
@@ -60,7 +60,7 @@ func (lh *LEDHandlerImpl) ledRoutes() []Route {
 }
 
 // GetAllLedStrips get all existing led strips
-func (lh *LEDHandlerImpl) GetAllLedStrips(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) GetAllLedStrips(w http.ResponseWriter, r *http.Request) {
 	strips, err := lh.lsvc.GetAll()
 	if err != nil {
 		handleError(&w, http.StatusNotFound, err.Error())
@@ -71,7 +71,7 @@ func (lh *LEDHandlerImpl) GetAllLedStrips(w http.ResponseWriter, r *http.Request
 }
 
 // GetLedStrip get a single led strip
-func (lh *LEDHandlerImpl) GetLedStrip(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) GetLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	strip, err := lh.lsvc.GetLEDStrip(getParam(r, "id"))
 	if err != nil {
@@ -83,7 +83,7 @@ func (lh *LEDHandlerImpl) GetLedStrip(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateLedStrip create an LED strip
-func (lh *LEDHandlerImpl) CreateLedStrip(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) CreateLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input model.LedStrip
 	if err := bindJSON(r, &input); err != nil {
@@ -101,7 +101,7 @@ func (lh *LEDHandlerImpl) CreateLedStrip(w http.ResponseWriter, r *http.Request)
 }
 
 // UpdateLedStrip update an LED strip
-func (lh *LEDHandlerImpl) UpdateLedStrip(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) UpdateLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input model.LedStrip
 	if err := bindJSON(r, &input); err != nil {
@@ -118,7 +118,7 @@ func (lh *LEDHandlerImpl) UpdateLedStrip(w http.ResponseWriter, r *http.Request)
 }
 
 // DeleteLedStrip delete an LED strip
-func (lh *LEDHandlerImpl) DeleteLedStrip(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) DeleteLedStrip(w http.ResponseWriter, r *http.Request) {
 	if err := lh.lsvc.DeleteLEDStrip(getParam(r, "id")); err != nil {
 		handleErr(&w, err)
 		return
@@ -128,7 +128,7 @@ func (lh *LEDHandlerImpl) DeleteLedStrip(w http.ResponseWriter, r *http.Request)
 }
 
 // UpdateProfileForStrip update which profile is referenced to the strip
-func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input model.ColorProfile
 	if err := bindJSON(r, &input); err != nil {
@@ -162,7 +162,7 @@ func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.R
 }
 
 // GetProfileForStrip get the current profile of a strip
-func (lh *LEDHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	strip, err := lh.dbh.Get(getParam(r, "id"))
 	if err != nil {
@@ -185,7 +185,7 @@ func (lh *LEDHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Requ
 }
 
 // RemoveProfileForStrip remove the current referenced profile
-func (lh *LEDHandlerImpl) RemoveProfileForStrip(w http.ResponseWriter, r *http.Request) {
+func (lh *ledHandlerImpl) RemoveProfileForStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	strip, err := lh.dbh.Get(getParam(r, "id"))
 	if err != nil {
@@ -205,7 +205,7 @@ func (lh *LEDHandlerImpl) RemoveProfileForStrip(w http.ResponseWriter, r *http.R
 	handleJSON(&w, http.StatusNoContent, nil)
 }
 
-func (lh *LEDHandlerImpl) publishStripSaveEvent(id null.Int, strip model.LedStrip, profile *model.ColorProfile) {
+func (lh *ledHandlerImpl) publishStripSaveEvent(id null.Int, strip model.LedStrip, profile *model.ColorProfile) {
 	var event = model.NewStripEvent(id, model.Save).With(&strip)
 
 	if strip.ProfileID.Valid {

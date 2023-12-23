@@ -17,7 +17,7 @@ import (
 
 type lhMocks struct {
 	*baseMocks
-	lh *LEDHandlerImpl
+	lh *ledHandlerImpl
 }
 
 func TestLedRoutes(t *testing.T) {
@@ -104,7 +104,6 @@ func TestCreateLEDStrip(t *testing.T) {
 	mocks := createLEDHandlerMocks(t)
 	reqObj := createValidDummyStrip()
 	var newId int64
-	var body io.Reader
 	mocks.lsDbh.
 		EXPECT().
 		Create(mock.Anything).
@@ -115,7 +114,7 @@ func TestCreateLEDStrip(t *testing.T) {
 		}).
 		Return(nil).
 		Once()
-	body = objToReader(t, reqObj)
+	body := objToReader(t, reqObj)
 	mocks.expectPublishStripEvent(t, model.Save, newId, true, false, nil)
 	req, w := prepareHttpTest(http.MethodPost, ledstripPath, nil, body)
 
@@ -152,13 +151,12 @@ func TestCreateLEDStrip_MissingBody(t *testing.T) {
 func TestCreateLEDStrip_SaveError(t *testing.T) {
 	mocks := createLEDHandlerMocks(t)
 	reqObj := createValidDummyStrip()
-	var body io.Reader
 	mocks.lsDbh.
 		EXPECT().
 		Create(mock.Anything).
 		Return(errors.New("save failed")).
 		Once()
-	body = objToReader(t, reqObj)
+	body := objToReader(t, reqObj)
 	req, w := prepareHttpTest(http.MethodPost, ledstripPath, nil, body)
 
 	mocks.lh.CreateLedStrip(w, req)
@@ -173,7 +171,6 @@ func TestCreateLEDStrip_PublishError(t *testing.T) {
 	mocks := createLEDHandlerMocks(t)
 	reqObj := createValidDummyStrip()
 	var newId int64
-	var body io.Reader
 	mocks.lsDbh.
 		EXPECT().
 		Create(mock.Anything).
@@ -184,7 +181,7 @@ func TestCreateLEDStrip_PublishError(t *testing.T) {
 		}).
 		Return(nil).
 		Once()
-	body = objToReader(t, reqObj)
+	body := objToReader(t, reqObj)
 	mocks.expectPublishStripEvent(t, model.Save, newId, true, false, errors.New("publish failed"))
 	req, w := prepareHttpTest(http.MethodPost, ledstripPath, nil, body)
 
@@ -276,7 +273,6 @@ func TestDeleteLEDStrip_PublishError(t *testing.T) {
 }
 
 func TestUpdateLEDStrip(t *testing.T) {
-
 	dbObj := model.LedStrip{
 		BaseModel:   model.BaseModel{ID: 185},
 		Description: "TestFromDb",
@@ -377,7 +373,6 @@ func TestUpdateLEDStrip_UpdateError(t *testing.T) {
 }
 
 func TestUpdateLEDStrip_PublishError(t *testing.T) {
-
 	dbObj := model.LedStrip{
 		BaseModel:   model.BaseModel{ID: 185},
 		Description: "TestFromDb",
@@ -391,10 +386,8 @@ func TestUpdateLEDStrip_PublishError(t *testing.T) {
 	}
 	inputObj := createValidDummyStrip()
 	inputObj.ProfileID = null.IntFrom(15)
-
 	fakeProfile := createDummyProfile()
 	fakeProfile.ID = inputObj.ProfileID.Int64
-
 	mocks := createLEDHandlerMocks(t)
 	mocks.expectDBStripGet(&dbObj, nil)
 	body := objToReader(t, inputObj)
@@ -500,7 +493,6 @@ func TestUpdateProfileForLEDStrip(t *testing.T) {
 		SpeedHz:     null.IntFrom(80000),
 		ProfileID:   null.IntFrom(15),
 	}
-
 	updateProfile := model.ColorProfile{
 		BaseModel:  model.BaseModel{ID: 16},
 		Red:        null.IntFrom(123),
@@ -508,16 +500,13 @@ func TestUpdateProfileForLEDStrip(t *testing.T) {
 		Blue:       null.IntFrom(123),
 		Brightness: null.IntFrom(2),
 	}
-
 	mocks := createLEDHandlerMocks(t)
 	getStripIdStr := idStr(returnObj.ID)
 	mocks.expectDBStripGet(&returnObj, nil)
 	mocks.expectDBProfileGet(&updateProfile, nil)
 	mocks.expectDBStripSave(nil)
 	mocks.expectPublishStripEvent(t, model.Save, returnObj.ID, true, true, nil)
-
 	body := objToReader(t, updateProfile)
-
 	req, w := prepareHttpTest(http.MethodPut, ledstripIDProfilePath, uv{"id": getStripIdStr}, body)
 
 	mocks.lh.UpdateProfileForStrip(w, req)
@@ -590,7 +579,6 @@ func TestUpdateProfileForLEDStrip_MissingProfile(t *testing.T) {
 		SpeedHz:     null.IntFrom(80000),
 		ProfileID:   null.IntFrom(15),
 	}
-
 	updateProfile := model.ColorProfile{
 		BaseModel:  model.BaseModel{ID: 16},
 		Red:        null.IntFrom(123),
@@ -598,7 +586,6 @@ func TestUpdateProfileForLEDStrip_MissingProfile(t *testing.T) {
 		Blue:       null.IntFrom(123),
 		Brightness: null.IntFrom(2),
 	}
-
 	mocks := createLEDHandlerMocks(t)
 	getStripIdStr := idStr(returnObj.ID)
 	mocks.expectDBStripGet(&returnObj, nil)
@@ -625,7 +612,6 @@ func TestUpdateProfileForLEDStrip_SaveError(t *testing.T) {
 		SpeedHz:     null.IntFrom(80000),
 		ProfileID:   null.IntFrom(15),
 	}
-
 	updateProfile := model.ColorProfile{
 		BaseModel:  model.BaseModel{ID: 16},
 		Red:        null.IntFrom(123),
@@ -633,15 +619,12 @@ func TestUpdateProfileForLEDStrip_SaveError(t *testing.T) {
 		Blue:       null.IntFrom(123),
 		Brightness: null.IntFrom(2),
 	}
-
 	mocks := createLEDHandlerMocks(t)
 	getStripIdStr := idStr(returnObj.ID)
 	mocks.expectDBStripGet(&returnObj, nil)
 	mocks.expectDBProfileGet(&updateProfile, nil)
 	mocks.expectDBStripSave(errors.New("save failed"))
-
 	body := objToReader(t, updateProfile)
-
 	req, w := prepareHttpTest(http.MethodPut, ledstripIDProfilePath, uv{"id": getStripIdStr}, body)
 
 	mocks.lh.UpdateProfileForStrip(w, req)
@@ -663,7 +646,6 @@ func TestUpdateProfileForLEDStrip_PublishError(t *testing.T) {
 		SpeedHz:     null.IntFrom(80000),
 		ProfileID:   null.IntFrom(15),
 	}
-
 	updateProfile := model.ColorProfile{
 		BaseModel:  model.BaseModel{ID: 16},
 		Red:        null.IntFrom(123),
@@ -671,16 +653,13 @@ func TestUpdateProfileForLEDStrip_PublishError(t *testing.T) {
 		Blue:       null.IntFrom(123),
 		Brightness: null.IntFrom(2),
 	}
-
 	mocks := createLEDHandlerMocks(t)
 	getStripIdStr := idStr(returnObj.ID)
 	mocks.expectDBStripGet(&returnObj, nil)
 	mocks.expectDBProfileGet(&updateProfile, nil)
 	mocks.expectDBStripSave(nil)
 	mocks.expectPublishStripEvent(t, model.Save, returnObj.ID, true, true, errors.New("publish error"))
-
 	body := objToReader(t, updateProfile)
-
 	req, w := prepareHttpTest(http.MethodPut, ledstripIDProfilePath, uv{"id": getStripIdStr}, body)
 
 	mocks.lh.UpdateProfileForStrip(w, req)
@@ -816,6 +795,6 @@ func createLEDHandlerMocks(t *testing.T) *lhMocks {
 	assert.NoError(t, err)
 	return &lhMocks{
 		baseMocks: bm,
-		lh:        lh.(*LEDHandlerImpl),
+		lh:        lh.(*ledHandlerImpl),
 	}
 }

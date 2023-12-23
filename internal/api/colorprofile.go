@@ -22,18 +22,18 @@ type CPHandler interface {
 	UpdateColorProfile(w http.ResponseWriter, r *http.Request)
 	DeleteColorProfile(w http.ResponseWriter, r *http.Request)
 }
-type CPHandlerImpl struct {
+type cpHandlerImpl struct {
 	cps service.CPService
 }
 
 func NewCPHandler(i *do.Injector) (CPHandler, error) {
 	cps := do.MustInvoke[service.CPService](i)
-	return &CPHandlerImpl{
+	return &cpHandlerImpl{
 		cps: cps,
 	}, nil
 }
 
-func (h *CPHandlerImpl) colorProfileRoutes() []Route {
+func (h *cpHandlerImpl) colorProfileRoutes() []Route {
 	return []Route{
 		{http.MethodGet, profilePath, h.GetAllColorProfiles},
 		{http.MethodPost, profilePath, h.CreateColorProfile},
@@ -44,7 +44,7 @@ func (h *CPHandlerImpl) colorProfileRoutes() []Route {
 }
 
 // GetAllColorProfiles get all color profiles
-func (h *CPHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Request) {
+func (h *cpHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Request) {
 	profiles, err := h.cps.GetAll()
 	if err != nil {
 		handleError(&w, http.StatusNotFound, err.Error())
@@ -55,7 +55,7 @@ func (h *CPHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Reque
 }
 
 // GetColorProfile get a specific color profile
-func (h *CPHandlerImpl) GetColorProfile(w http.ResponseWriter, r *http.Request) {
+func (h *cpHandlerImpl) GetColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
 	profile, err := h.cps.GetColorProfile(getParam(r, "id"))
 	if err != nil {
@@ -67,7 +67,7 @@ func (h *CPHandlerImpl) GetColorProfile(w http.ResponseWriter, r *http.Request) 
 }
 
 // CreateColorProfile create a color profile
-func (h *CPHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Request) {
+func (h *cpHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input model.ColorProfile
 	if err := bindJSON(r, &input); err != nil {
@@ -84,7 +84,7 @@ func (h *CPHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Reques
 }
 
 // UpdateColorProfile update a color profile
-func (h *CPHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Request) {
+func (h *cpHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input model.ColorProfile
 	if err := bindJSON(r, &input); err != nil {
@@ -101,7 +101,7 @@ func (h *CPHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Reques
 }
 
 // DeleteColorProfile delete a color profile
-func (h *CPHandlerImpl) DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
+func (h *cpHandlerImpl) DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
 	if err := h.cps.DeleteColorProfile(getParam(r, "id")); err != nil {
 		handleErr(&w, err)
 		return

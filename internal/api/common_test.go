@@ -30,7 +30,7 @@ type baseMocks struct {
 }
 
 func TestRouteHandlerName(t *testing.T) {
-	tmp := (&LEDHandlerImpl{}).GetAllLedStrips
+	tmp := (&ledHandlerImpl{}).GetAllLedStrips
 	r := &Route{"GET", "/", tmp}
 	assert.Equal(t, "GetAllLedStrips", r.HandlerName())
 }

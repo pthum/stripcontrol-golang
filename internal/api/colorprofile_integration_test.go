@@ -15,7 +15,7 @@ import (
 
 type cphITMocks struct {
 	*baseMocks
-	cph *CPHandlerImpl
+	cph *cpHandlerImpl
 }
 
 func TestGetAllColorProfilesIT(t *testing.T) {
@@ -320,6 +320,6 @@ func createCPHandlerITMocks(t *testing.T) *cphITMocks {
 	assert.NoError(t, err)
 	return &cphITMocks{
 		baseMocks: bm,
-		cph:       cph.(*CPHandlerImpl),
+		cph:       cph.(*cpHandlerImpl),
 	}
 }

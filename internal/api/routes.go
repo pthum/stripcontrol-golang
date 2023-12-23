@@ -12,8 +12,8 @@ import (
 // NewRouter initializes a new router, setup with all routes
 func NewRouter(i *do.Injector, enableDebug bool) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
-	cph := do.MustInvoke[CPHandler](i).(*CPHandlerImpl)
-	lh := do.MustInvoke[LEDHandler](i).(*LEDHandlerImpl)
+	cph := do.MustInvoke[CPHandler](i).(*cpHandlerImpl)
+	lh := do.MustInvoke[LEDHandler](i).(*ledHandlerImpl)
 	var routes []Route
 	var cproutes = cph.colorProfileRoutes()
 	var lroutes = lh.ledRoutes()
