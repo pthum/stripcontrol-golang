@@ -3,9 +3,7 @@ package api
 import (
 	"log"
 	"net/http"
-	"strconv"
 
-	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/internal/database"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	"github.com/pthum/stripcontrol-golang/internal/model"
@@ -135,49 +133,19 @@ func (lh *ledHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.R
 		handleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// Get model if exist
-	strip, err := lh.dbh.Get(getParam(r, "id"))
+	profile, err := lh.lsvc.UpdateProfileForStrip(getParam(r, "id"), input)
 	if err != nil {
-		handleError(&w, http.StatusNotFound, err.Error())
-		return
+		handleErr(&w, err)
 	}
-
-	profile, err := lh.cpDbh.Get(input.GetStringID())
-	if err != nil {
-		handleError(&w, http.StatusNotFound, err.Error())
-		return
-	}
-
-	strip.ProfileID = profile.GetNullID()
-
-	if err := lh.dbh.Save(strip); err != nil {
-		log.Printf("Error: %s", err)
-		handleError(&w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	go lh.publishStripSaveEvent(strip.GetNullID(), *strip, profile)
 
 	handleJSON(&w, http.StatusOK, profile)
 }
 
 // GetProfileForStrip get the current profile of a strip
 func (lh *ledHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Request) {
-	// Get model if exist
-	strip, err := lh.dbh.Get(getParam(r, "id"))
+	profile, err := lh.lsvc.GetProfileForStrip(getParam(r, "id"))
 	if err != nil {
-		handleError(&w, http.StatusNotFound, err.Error())
-		return
-	}
-
-	if !strip.ProfileID.Valid {
-		handleError(&w, http.StatusNotFound, "Profile not found!")
-		return
-	}
-
-	profile, err := lh.cpDbh.Get(strconv.FormatInt(strip.ProfileID.Int64, 10))
-	if err != nil {
-		handleError(&w, http.StatusNotFound, err.Error())
+		handleErr(&w, err)
 		return
 	}
 
@@ -186,36 +154,10 @@ func (lh *ledHandlerImpl) GetProfileForStrip(w http.ResponseWriter, r *http.Requ
 
 // RemoveProfileForStrip remove the current referenced profile
 func (lh *ledHandlerImpl) RemoveProfileForStrip(w http.ResponseWriter, r *http.Request) {
-	// Get model if exist
-	strip, err := lh.dbh.Get(getParam(r, "id"))
-	if err != nil {
-		handleError(&w, http.StatusNotFound, err.Error())
+	if err := lh.lsvc.RemoveProfileForStrip(getParam(r, "id")); err != nil {
+		handleErr(&w, err)
 		return
 	}
-
-	strip.ProfileID.Valid = false
-
-	if err := lh.dbh.Save(strip); err != nil {
-		handleError(&w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	go lh.publishStripSaveEvent(strip.GetNullID(), *strip, nil)
 
 	handleJSON(&w, http.StatusNoContent, nil)
-}
-
-func (lh *ledHandlerImpl) publishStripSaveEvent(id null.Int, strip model.LedStrip, profile *model.ColorProfile) {
-	var event = model.NewStripEvent(id, model.Save).With(&strip)
-
-	if strip.ProfileID.Valid {
-		if profile != nil {
-			event.Strip.With(*profile)
-		}
-	}
-
-	if err := lh.mh.PublishStripEvent(event); err != nil {
-		log.Printf("error: %s", err.Error())
-		return
-	}
 }

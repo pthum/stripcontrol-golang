@@ -211,6 +211,102 @@ func (_c *LEDService_GetLEDStrip_Call) RunAndReturn(run func(string) (*model.Led
 	return _c
 }
 
+// GetProfileForStrip provides a mock function with given fields: id
+func (_m *LEDService) GetProfileForStrip(id string) (*model.ColorProfile, error) {
+	ret := _m.Called(id)
+
+	var r0 *model.ColorProfile
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (*model.ColorProfile, error)); ok {
+		return rf(id)
+	}
+	if rf, ok := ret.Get(0).(func(string) *model.ColorProfile); ok {
+		r0 = rf(id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.ColorProfile)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// LEDService_GetProfileForStrip_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProfileForStrip'
+type LEDService_GetProfileForStrip_Call struct {
+	*mock.Call
+}
+
+// GetProfileForStrip is a helper method to define mock.On call
+//   - id string
+func (_e *LEDService_Expecter) GetProfileForStrip(id interface{}) *LEDService_GetProfileForStrip_Call {
+	return &LEDService_GetProfileForStrip_Call{Call: _e.mock.On("GetProfileForStrip", id)}
+}
+
+func (_c *LEDService_GetProfileForStrip_Call) Run(run func(id string)) *LEDService_GetProfileForStrip_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *LEDService_GetProfileForStrip_Call) Return(_a0 *model.ColorProfile, _a1 error) *LEDService_GetProfileForStrip_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *LEDService_GetProfileForStrip_Call) RunAndReturn(run func(string) (*model.ColorProfile, error)) *LEDService_GetProfileForStrip_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveProfileForStrip provides a mock function with given fields: id
+func (_m *LEDService) RemoveProfileForStrip(id string) error {
+	ret := _m.Called(id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// LEDService_RemoveProfileForStrip_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveProfileForStrip'
+type LEDService_RemoveProfileForStrip_Call struct {
+	*mock.Call
+}
+
+// RemoveProfileForStrip is a helper method to define mock.On call
+//   - id string
+func (_e *LEDService_Expecter) RemoveProfileForStrip(id interface{}) *LEDService_RemoveProfileForStrip_Call {
+	return &LEDService_RemoveProfileForStrip_Call{Call: _e.mock.On("RemoveProfileForStrip", id)}
+}
+
+func (_c *LEDService_RemoveProfileForStrip_Call) Run(run func(id string)) *LEDService_RemoveProfileForStrip_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *LEDService_RemoveProfileForStrip_Call) Return(_a0 error) *LEDService_RemoveProfileForStrip_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *LEDService_RemoveProfileForStrip_Call) RunAndReturn(run func(string) error) *LEDService_RemoveProfileForStrip_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateLEDStrip provides a mock function with given fields: id, updMdl
 func (_m *LEDService) UpdateLEDStrip(id string, updMdl model.LedStrip) error {
 	ret := _m.Called(id, updMdl)

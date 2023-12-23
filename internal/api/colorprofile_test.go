@@ -46,7 +46,7 @@ func TestGetAllColorProfiles(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestGetAllColorProfiles_GetError(t *testing.T) {
+func TestGetAllColorProfiles_Error(t *testing.T) {
 	mocks := createCPHandlerMocks(t)
 	destarr := []model.ColorProfile{}
 	mocks.cps.
@@ -84,7 +84,7 @@ func TestGetColorProfile(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestGetColorProfile_GetError(t *testing.T) {
+func TestGetColorProfile_Error(t *testing.T) {
 	mocks := createCPHandlerMocks(t)
 	retObj := createDummyProfile()
 	idS := idStringOrDefault(retObj, "9000")
@@ -138,7 +138,7 @@ func TestCreateColorProfile_MissingBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func TestCreateColorProfile_SaveError(t *testing.T) {
+func TestCreateColorProfile_Error(t *testing.T) {
 	mocks := createCPHandlerMocks(t)
 	inBody := createDummyProfile()
 	mocks.cps.
@@ -174,7 +174,7 @@ func TestDeleteColorProfile(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 }
 
-func TestDeleteColorProfile_DeleteError(t *testing.T) {
+func TestDeleteColorProfile_Error(t *testing.T) {
 	mocks := createCPHandlerMocks(t)
 	getObj := createDummyProfile()
 	mocks.cps.
@@ -228,7 +228,7 @@ func TestUpdateColorProfile_MissingBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func TestUpdateColorProfile_UpdateError(t *testing.T) {
+func TestUpdateColorProfile_Error(t *testing.T) {
 	mocks := createCPHandlerMocks(t)
 	inBody := createDummyProfile()
 	body := objToReader(t, inBody)

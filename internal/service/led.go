@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"log"
 	"strconv"
 
@@ -18,6 +19,9 @@ type LEDService interface {
 	CreateLEDStrip(mdl *model.LedStrip) error
 	UpdateLEDStrip(id string, updMdl model.LedStrip) error
 	DeleteLEDStrip(id string) error
+	UpdateProfileForStrip(id string, updProf model.ColorProfile) (*model.ColorProfile, error)
+	GetProfileForStrip(id string) (*model.ColorProfile, error)
+	RemoveProfileForStrip(id string) error
 }
 
 type ledSvc struct {
@@ -90,6 +94,47 @@ func (l *ledSvc) DeleteLEDStrip(id string) error {
 	return nil
 }
 
+func (l *ledSvc) UpdateProfileForStrip(id string, updProf model.ColorProfile) (*model.ColorProfile, error) {
+	// Get model if exist
+	strip, err := l.dbh.Get(id)
+	if err != nil {
+		return nil, model.NewAppErr(404, err)
+	}
+
+	profile, err := l.cpDbh.Get(updProf.GetStringID())
+	if err != nil {
+		return nil, model.NewAppErr(404, err)
+	}
+
+	strip.ProfileID = profile.GetNullID()
+
+	if err := l.dbh.Save(strip); err != nil {
+		log.Printf("Error: %s", err)
+		return nil, model.NewAppErr(500, err)
+	}
+
+	go l.publishStripSaveEvent(strip.GetNullID(), *strip, profile)
+	return profile, nil
+}
+
+func (l *ledSvc) GetProfileForStrip(id string) (*model.ColorProfile, error) {
+	// Get model if exist
+	strip, err := l.dbh.Get(id)
+	if err != nil {
+		return nil, model.NewAppErr(404, err)
+	}
+
+	if !strip.ProfileID.Valid {
+		return nil, model.NewAppErr(404, errors.New("Profile not found"))
+	}
+
+	profile, err := l.cpDbh.Get(strconv.FormatInt(strip.ProfileID.Int64, 10))
+	if err != nil {
+		return nil, model.NewAppErr(404, err)
+	}
+	return profile, nil
+}
+
 func (l *ledSvc) publishStripSaveEvent(id null.Int, strip model.LedStrip, profile *model.ColorProfile) {
 	var event = model.NewStripEvent(id, model.Save).With(&strip)
 
@@ -103,4 +148,21 @@ func (l *ledSvc) publishStripSaveEvent(id null.Int, strip model.LedStrip, profil
 		log.Printf("error: %s", err.Error())
 		return
 	}
+}
+
+func (l *ledSvc) RemoveProfileForStrip(id string) error {
+	// Get model if exist
+	strip, err := l.dbh.Get(id)
+	if err != nil {
+		return model.NewAppErr(404, err)
+	}
+
+	strip.ProfileID.Valid = false
+
+	if err := l.dbh.Save(strip); err != nil {
+		return model.NewAppErr(500, err)
+	}
+
+	go l.publishStripSaveEvent(strip.GetNullID(), *strip, nil)
+	return nil
 }
