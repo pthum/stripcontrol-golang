@@ -1,0 +1,106 @@
+package service
+
+import (
+	"log"
+	"strconv"
+
+	"github.com/pthum/null"
+	"github.com/pthum/stripcontrol-golang/internal/database"
+	"github.com/pthum/stripcontrol-golang/internal/messaging"
+	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/samber/do"
+)
+
+//go:generate mockery --name=LEDService --with-expecter=true --outpkg=servicemocks
+type LEDService interface {
+	GetAll() ([]model.LedStrip, error)
+	GetLEDStrip(id string) (*model.LedStrip, error)
+	CreateLEDStrip(mdl *model.LedStrip) error
+	UpdateLEDStrip(id string, updMdl model.LedStrip) error
+	DeleteLEDStrip(id string) error
+}
+
+type ledSvc struct {
+	dbh   database.DBHandler[model.LedStrip]
+	cpDbh database.DBHandler[model.ColorProfile]
+	mh    messaging.EventHandler
+}
+
+func NewLEDService(i *do.Injector) (LEDService, error) {
+	lsdb := do.MustInvoke[database.DBHandler[model.LedStrip]](i)
+	cpdb := do.MustInvoke[database.DBHandler[model.ColorProfile]](i)
+	mh := do.MustInvoke[messaging.EventHandler](i)
+	return &ledSvc{
+		dbh:   lsdb,
+		cpDbh: cpdb,
+		mh:    mh,
+	}, nil
+}
+
+func (l *ledSvc) GetAll() ([]model.LedStrip, error) {
+	return l.dbh.GetAll()
+}
+func (l *ledSvc) GetLEDStrip(id string) (*model.LedStrip, error) {
+	return l.dbh.Get(id)
+}
+func (l *ledSvc) CreateLEDStrip(mdl *model.LedStrip) error {
+	// generate an id
+	mdl.GenerateID()
+	log.Printf("Generated ID %d", mdl.ID)
+
+	if err := l.dbh.Create(mdl); err != nil {
+		return err
+	}
+
+	go l.publishStripSaveEvent(null.NewInt(0, false), *mdl, nil)
+	return nil
+}
+
+func (l *ledSvc) UpdateLEDStrip(id string, updMdl model.LedStrip) error {
+	// Get model if exist
+	strip, err := l.dbh.Get(id)
+	if err != nil {
+		return model.NewAppErr(404, err)
+	}
+
+	// profile shouldn't be updated through this endpoint
+	updMdl.ProfileID = strip.ProfileID
+
+	if err := l.dbh.Update(*strip, updMdl); err != nil {
+		return model.NewAppErr(400, err)
+	}
+	// load profile for event
+	profile, _ := l.cpDbh.Get(strconv.FormatInt(updMdl.ProfileID.Int64, 10)) // FIXME error handling
+	go l.publishStripSaveEvent(updMdl.GetNullID(), updMdl, profile)
+	return nil
+}
+
+func (l *ledSvc) DeleteLEDStrip(id string) error {
+	// Get model if exist
+	strip, err := l.dbh.Get(id)
+	if err != nil {
+		return model.NewAppErr(404, err)
+	}
+
+	if err := l.dbh.Delete(strip); err != nil {
+		return model.NewAppErr(400, err)
+	}
+	var event = model.NewStripEvent(strip.GetNullID(), model.Delete)
+	go l.mh.PublishStripEvent(event)
+	return nil
+}
+
+func (l *ledSvc) publishStripSaveEvent(id null.Int, strip model.LedStrip, profile *model.ColorProfile) {
+	var event = model.NewStripEvent(id, model.Save).With(&strip)
+
+	if strip.ProfileID.Valid {
+		if profile != nil {
+			event.Strip.With(*profile)
+		}
+	}
+
+	if err := l.mh.PublishStripEvent(event); err != nil {
+		log.Printf("error: %s", err.Error())
+		return
+	}
+}

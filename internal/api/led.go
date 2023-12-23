@@ -9,6 +9,7 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/database"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
 	"github.com/samber/do"
 )
 
@@ -29,16 +30,19 @@ type LEDHandlerImpl struct {
 	dbh   database.DBHandler[model.LedStrip]
 	cpDbh database.DBHandler[model.ColorProfile]
 	mh    messaging.EventHandler
+	lsvc  service.LEDService
 }
 
 func NewLEDHandler(i *do.Injector) (LEDHandler, error) {
 	lsdb := do.MustInvoke[database.DBHandler[model.LedStrip]](i)
 	cpdb := do.MustInvoke[database.DBHandler[model.ColorProfile]](i)
 	mh := do.MustInvoke[messaging.EventHandler](i)
+	lsvc := do.MustInvoke[service.LEDService](i)
 	return &LEDHandlerImpl{
 		dbh:   lsdb,
 		cpDbh: cpdb,
 		mh:    mh,
+		lsvc:  lsvc,
 	}, nil
 }
 
@@ -57,7 +61,7 @@ func (lh *LEDHandlerImpl) ledRoutes() []Route {
 
 // GetAllLedStrips get all existing led strips
 func (lh *LEDHandlerImpl) GetAllLedStrips(w http.ResponseWriter, r *http.Request) {
-	strips, err := lh.dbh.GetAll()
+	strips, err := lh.lsvc.GetAll()
 	if err != nil {
 		handleError(&w, http.StatusNotFound, err.Error())
 		return
@@ -69,7 +73,7 @@ func (lh *LEDHandlerImpl) GetAllLedStrips(w http.ResponseWriter, r *http.Request
 // GetLedStrip get a single led strip
 func (lh *LEDHandlerImpl) GetLedStrip(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
-	strip, err := lh.dbh.Get(getParam(r, "id"))
+	strip, err := lh.lsvc.GetLEDStrip(getParam(r, "id"))
 	if err != nil {
 		handleError(&w, http.StatusNotFound, stripNotFoundMsg)
 		return
@@ -87,82 +91,54 @@ func (lh *LEDHandlerImpl) CreateLedStrip(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// generate an id
-	input.GenerateID()
-	log.Printf("Generated ID %d", input.ID)
-
-	if err := lh.dbh.Create(&input); err != nil {
+	if err := lh.lsvc.CreateLEDStrip(&input); err != nil {
 		log.Printf("Error: %s", err)
 		handleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	go lh.publishStripSaveEvent(null.NewInt(0, false), input, nil)
 
 	respondWithCreated(r, w, &input)
 }
 
 // UpdateLedStrip update an LED strip
 func (lh *LEDHandlerImpl) UpdateLedStrip(w http.ResponseWriter, r *http.Request) {
-	// Get model if exist
-	strip, err := lh.dbh.Get(getParam(r, "id"))
-	if err != nil {
-		handleError(&w, http.StatusNotFound, stripNotFoundMsg)
-		return
-	}
-
 	// Validate input
 	var input model.LedStrip
 	if err := bindJSON(r, &input); err != nil {
-		handleError(&w, http.StatusBadRequest, err.Error())
+		handleErr(&w, model.NewAppErr(http.StatusBadRequest, err))
 		return
 	}
-	// profile shouldn't be updated through this endpoint
-	input.ProfileID = strip.ProfileID
 
-	if err := lh.dbh.Update(*strip, input); err != nil {
-		log.Printf("error: %s", err.Error())
+	if err := lh.lsvc.UpdateLEDStrip(getParam(r, "id"), input); err != nil {
+		handleErr(&w, err)
 		return
 	}
-	// load profile for event
-	profile, _ := lh.cpDbh.Get(strconv.FormatInt(input.ProfileID.Int64, 10)) // FIXME error handling
-	go lh.publishStripSaveEvent(input.GetNullID(), input, profile)
 
-	handleJSON(&w, http.StatusOK, strip)
+	handleJSON(&w, http.StatusOK, input)
 }
 
 // DeleteLedStrip delete an LED strip
 func (lh *LEDHandlerImpl) DeleteLedStrip(w http.ResponseWriter, r *http.Request) {
-	// Get model if exist
-	strip, err := lh.dbh.Get(getParam(r, "id"))
-	if err != nil {
-		handleError(&w, http.StatusNotFound, stripNotFoundMsg)
+	if err := lh.lsvc.DeleteLEDStrip(getParam(r, "id")); err != nil {
+		handleErr(&w, err)
 		return
 	}
-
-	if err := lh.dbh.Delete(strip); err != nil {
-		handleError(&w, http.StatusBadRequest, err.Error())
-		return
-	}
-	var event = model.NewStripEvent(strip.GetNullID(), model.Delete)
-	go lh.mh.PublishStripEvent(event)
 
 	handleJSON(&w, http.StatusNoContent, nil)
 }
 
 // UpdateProfileForStrip update which profile is referenced to the strip
 func (lh *LEDHandlerImpl) UpdateProfileForStrip(w http.ResponseWriter, r *http.Request) {
-	// Get model if exist
-	strip, err := lh.dbh.Get(getParam(r, "id"))
-	if err != nil {
-		handleError(&w, http.StatusNotFound, err.Error())
-		return
-	}
-
 	// Validate input
 	var input model.ColorProfile
 	if err := bindJSON(r, &input); err != nil {
 		handleError(&w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Get model if exist
+	strip, err := lh.dbh.Get(getParam(r, "id"))
+	if err != nil {
+		handleError(&w, http.StatusNotFound, err.Error())
 		return
 	}
 

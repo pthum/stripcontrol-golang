@@ -9,6 +9,7 @@ import (
 
 	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
 	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -808,6 +809,9 @@ func createValidDummyStrip() *model.LedStrip {
 func createLEDHandlerMocks(t *testing.T) *lhMocks {
 	i := do.New()
 	bm := createBaseMocks(i, t)
+	ls, err := service.NewLEDService(i)
+	assert.NoError(t, err)
+	do.ProvideValue(i, ls)
 	lh, err := NewLEDHandler(i)
 	assert.NoError(t, err)
 	return &lhMocks{
