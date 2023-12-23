@@ -8,6 +8,7 @@ import (
 	"github.com/samber/do"
 )
 
+//go:generate mockery --name=CPService --with-expecter=true --outpkg=servicemocks
 type CPService interface {
 	GetAll() ([]model.ColorProfile, error)
 	GetColorProfile(id string) (*model.ColorProfile, error)
