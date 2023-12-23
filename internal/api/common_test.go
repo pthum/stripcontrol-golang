@@ -21,39 +21,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type getTest[T any] struct {
-	name           string
-	returnError    error
-	returnObj      *T
-	expectedStatus int
-}
-
-type createTest[T any] struct {
-	name           string
-	returnError    error
-	body           *T
-	publishError   error
-	expectedStatus int
-}
-
-type deleteTest[T any] struct {
-	name           string
-	getObj         *T
-	getError       error
-	deleteError    error
-	publishError   error
-	expectedStatus int
-}
-
-type updateTest[T any] struct {
-	name           string
-	body           *T
-	getError       error
-	updateError    error
-	publishError   error
-	expectedStatus int
-}
-
 type uv map[string]string
 
 type baseMocks struct {
