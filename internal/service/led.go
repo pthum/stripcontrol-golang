@@ -74,8 +74,10 @@ func (l *ledSvc) UpdateLEDStrip(id string, updMdl model.LedStrip) error {
 		return model.NewAppErr(400, err)
 	}
 	// load profile for event
-	profile, _ := l.cpDbh.Get(strconv.FormatInt(updMdl.ProfileID.Int64, 10)) // FIXME error handling
-	go l.publishStripSaveEvent(updMdl.GetNullID(), updMdl, profile)
+	profile, err := l.cpDbh.Get(strconv.FormatInt(updMdl.ProfileID.Int64, 10))
+	if err == nil {
+		go l.publishStripSaveEvent(updMdl.GetNullID(), updMdl, profile)
+	}
 	return nil
 }
 

@@ -97,7 +97,7 @@ func (h *cpHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	handleJSON(&w, http.StatusOK, input) //FIXME input to pointer
+	handleJSON(&w, http.StatusOK, input)
 }
 
 // DeleteColorProfile delete a color profile
