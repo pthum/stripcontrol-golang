@@ -16,6 +16,7 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/database/csv"
 	messagingimpl "github.com/pthum/stripcontrol-golang/internal/messaging/impl"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
 	"github.com/pthum/stripcontrol-golang/internal/telegram"
 	"github.com/samber/do"
 
@@ -44,9 +45,12 @@ func main() {
 	do.Provide(inj, csv.NewHandlerI[model.ColorProfile])
 	do.Provide(inj, csv.NewHandlerI[model.LedStrip])
 	do.Provide(inj, messagingimpl.New)
+	do.Provide(inj, service.NewCPService)
+	do.Provide(inj, service.NewLEDService)
 	do.Provide(inj, api.NewCPHandler)
+	do.Provide(inj, api.NewLEDHandler)
 
-	tgH := telegram.NewHandler(cfg.Telegram)
+	tgH := telegram.NewHandler(inj, cfg.Telegram)
 	go tgH.Handle()
 
 	router := api.NewRouter(inj, enableDebug)

@@ -36,6 +36,8 @@ type CSVConfig struct {
 }
 
 type TelegramConfig struct {
+	Enable         bool    `yaml:"enable" envconfig:"TG_ENABLE"`
+	EnableDebug    bool    `yaml:"enabledebug" envconfig:"TG_ENABLE_DEBUG"`
 	BotKey         string  `yaml:"apikey" envconfig:"TG_BOT_APIKEY"`
 	AllowedUserIDs []int64 `yaml:"allowedusers" envconfig:"TG_ALLOWED_USERS"`
 }
