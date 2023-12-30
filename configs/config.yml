@@ -16,4 +16,11 @@ messaging:
     disabled: true
 csv:
     datadir: configs/
-    intervalmin: 1
+    intervalmin: 60
+
+telegram:
+    enable: true
+    enabledebug: false
+    apikey: 123456789:asdf
+    allowedusers:
+      - 123456789
