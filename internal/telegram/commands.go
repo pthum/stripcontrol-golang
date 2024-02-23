@@ -2,11 +2,11 @@ package telegram
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/pthum/stripcontrol-golang/internal/service"
 	"github.com/samber/do"
 )
@@ -20,12 +20,15 @@ type botCommand struct {
 }
 type cmdHandler struct {
 	lsvc service.LEDService
+	l    alog.Logger
 }
 
 func NewCmdHandler(i *do.Injector) *cmdHandler {
 	lsvc := do.MustInvoke[service.LEDService](i)
+	l := alog.NewLogger("cmdhandler")
 	return &cmdHandler{
 		lsvc: lsvc,
+		l:    l,
 	}
 }
 func (c *cmdHandler) GetCommands() []botCommand {
@@ -65,7 +68,7 @@ func (c *cmdHandler) actionGetAll(inp *tgbotapi.Message) string {
 	strips, err := c.lsvc.GetAll()
 	if err != nil {
 		emsg := "Error getting all LED strips"
-		log.Printf(emsg+": %v", err)
+		c.l.Error(emsg+": %v", err)
 		return emsg
 	}
 	msg := "All LED Strips: \n"

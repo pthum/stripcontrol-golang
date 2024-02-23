@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +13,7 @@ import (
 	"github.com/pthum/stripcontrol-golang/internal/api"
 	"github.com/pthum/stripcontrol-golang/internal/config"
 	"github.com/pthum/stripcontrol-golang/internal/database/csv"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	messagingimpl "github.com/pthum/stripcontrol-golang/internal/messaging/impl"
 	"github.com/pthum/stripcontrol-golang/internal/model"
 	"github.com/pthum/stripcontrol-golang/internal/service"
@@ -33,8 +33,9 @@ func main() {
 
 	flag.Parse()
 	cfg, err := config.InitConfig(configFile)
+	l := alog.NewLogger("main")
 	if err != nil {
-		log.Fatalf("Error initializing config: %v", err)
+		l.Error("Error initializing config: %v", err)
 	}
 	var enableDebug = cfg.Server.Mode != "release"
 
@@ -65,7 +66,7 @@ func main() {
 	}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen:%+s\n", err)
+			l.Warn("listen:%+s\n", err)
 		}
 	}()
 	scheduleJobs(inj)
@@ -80,9 +81,9 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("error shutting down server %s", err)
+		l.Error("error shutting down server %s", err)
 	} else {
-		log.Println("Server gracefully stopped")
+		l.Info("Server gracefully stopped")
 	}
 }
 

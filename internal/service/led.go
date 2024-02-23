@@ -2,11 +2,11 @@ package service
 
 import (
 	"errors"
-	"log"
 	"strconv"
 
 	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/internal/database"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	"github.com/pthum/stripcontrol-golang/internal/model"
 	"github.com/samber/do"
@@ -28,16 +28,19 @@ type ledSvc struct {
 	dbh   database.DBHandler[model.LedStrip]
 	cpDbh database.DBHandler[model.ColorProfile]
 	mh    messaging.EventHandler
+	l     alog.Logger
 }
 
 func NewLEDService(i *do.Injector) (LEDService, error) {
 	lsdb := do.MustInvoke[database.DBHandler[model.LedStrip]](i)
 	cpdb := do.MustInvoke[database.DBHandler[model.ColorProfile]](i)
 	mh := do.MustInvoke[messaging.EventHandler](i)
+	l := alog.NewLogger("ledservice")
 	return &ledSvc{
 		dbh:   lsdb,
 		cpDbh: cpdb,
 		mh:    mh,
+		l:     l,
 	}, nil
 }
 
@@ -50,7 +53,7 @@ func (l *ledSvc) GetLEDStrip(id string) (*model.LedStrip, error) {
 func (l *ledSvc) CreateLEDStrip(mdl *model.LedStrip) error {
 	// generate an id
 	mdl.GenerateID()
-	log.Printf("Generated ID %d", mdl.ID)
+	l.l.Debug("Generated ID %d", mdl.ID)
 
 	if err := l.dbh.Create(mdl); err != nil {
 		return err
@@ -111,7 +114,7 @@ func (l *ledSvc) UpdateProfileForStrip(id string, updProf model.ColorProfile) (*
 	strip.ProfileID = profile.GetNullID()
 
 	if err := l.dbh.Save(strip); err != nil {
-		log.Printf("Error: %s", err)
+		l.l.Error("Error: %s", err)
 		return nil, model.NewAppErr(500, err)
 	}
 
@@ -147,7 +150,7 @@ func (l *ledSvc) publishStripSaveEvent(id null.Int, strip model.LedStrip, profil
 	}
 
 	if err := l.mh.PublishStripEvent(event); err != nil {
-		log.Printf("error: %s", err.Error())
+		l.l.Error("error: %s", err.Error())
 		return
 	}
 }

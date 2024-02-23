@@ -1,16 +1,17 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/samber/do"
 )
 
 // NewRouter initializes a new router, setup with all routes
 func NewRouter(i *do.Injector, enableDebug bool) *mux.Router {
+	l := alog.NewLogger("router")
 	router := mux.NewRouter().StrictSlash(true)
 	cph := do.MustInvoke[CPHandler](i).(*cpHandlerImpl)
 	lh := do.MustInvoke[LEDHandler](i).(*ledHandlerImpl)
@@ -21,7 +22,7 @@ func NewRouter(i *do.Injector, enableDebug bool) *mux.Router {
 	routes = append(routes, lroutes...)
 
 	for _, route := range routes {
-		log.Printf("appending \"%v\": %v %v \n", route.HandlerName(), route.Method, route.Pattern)
+		l.Info("appending \"%v\": %v %v \n", route.HandlerName(), route.Method, route.Pattern)
 		var handler http.Handler
 		handler = route.HandlerFunc
 		if enableDebug {
@@ -49,11 +50,12 @@ func NewRouter(i *do.Injector, enableDebug bool) *mux.Router {
 
 // RequestLogger logs the request and duration
 func RequestLogger(inner http.Handler) http.Handler {
+	lg := alog.NewLogger("request")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		inner.ServeHTTP(w, r)
 
-		log.Printf("[ %s ] %s %s", r.Method, r.RequestURI, time.Since(start))
+		lg.Debug("[ %s ] %s %s", r.Method, r.RequestURI, time.Since(start))
 	})
 }

@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	"github.com/gocarina/gocsv"
 	"github.com/pthum/stripcontrol-golang/internal/config"
 	"github.com/pthum/stripcontrol-golang/internal/database"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/pthum/stripcontrol-golang/internal/model"
 	"github.com/samber/do"
 )
@@ -25,12 +25,14 @@ type CSVHandler[T any] struct {
 	cfg           *config.CSVConfig
 	iMap          *SyncMap[string, T]
 	lastCheckHash string
+	l             alog.Logger
 }
 
 func NewHandler[T any](cfg *config.CSVConfig) *CSVHandler[T] {
 	ch := &CSVHandler[T]{
 		cfg:  cfg,
 		iMap: NewSyncMap[string, T](),
+		l:    alog.NewLogger("csvhandler"),
 	}
 	ch.load()
 	return ch
@@ -41,6 +43,7 @@ func NewHandlerI[T any](inj *do.Injector) (database.DBHandler[T], error) {
 	ch := &CSVHandler[T]{
 		cfg:  &acfg.CSV,
 		iMap: NewSyncMap[string, T](),
+		l:    alog.NewLogger("csvhandler"),
 	}
 	ch.load()
 	ch.ScheduleJob(s)
@@ -104,12 +107,12 @@ func (c *CSVHandler[T]) ScheduleJob(s *gocron.Scheduler) {
 		return
 	}
 	name := c.tableName()
-	log.Printf("Scheduling job for %v with interval of %v min", name, c.cfg.Interval)
+	c.l.Info("Scheduling job for %v with interval of %v min", name, c.cfg.Interval)
 
 	_, err := s.Every(c.cfg.Interval).Minutes().Tag(name).Do(c.persistIfNecessary)
 	if err != nil {
 		// handle the error related to setting up the job
-		log.Printf("error scheduling the %v job: %s", name, err.Error())
+		c.l.Error("error scheduling the %v job: %s", name, err.Error())
 	}
 }
 func (c *CSVHandler[T]) findId(input any) string {
@@ -163,12 +166,12 @@ func (c *CSVHandler[T]) load() {
 			}
 		}
 	} else {
-		log.Println("No data dir given, skip loading existing data")
+		c.l.Warn("No data dir given, skip loading existing data")
 	}
 
 	for i := range elems {
 		if err := c.Save(&elems[i]); err != nil {
-			log.Printf("error: %s\n", err.Error())
+			c.l.Error("error: %s\n", err.Error())
 		}
 	}
 	var err error
@@ -179,19 +182,19 @@ func (c *CSVHandler[T]) load() {
 
 func (c *CSVHandler[T]) persistIfNecessary() {
 	tName := c.tableName()
-	log.Println("Running job for " + tName)
+	c.l.Info("Running job for " + tName)
 	currentHash, err := c.hashEntries()
 	if err != nil {
-		log.Printf("error calculating the hash in job %v: %s\n", tName, err.Error())
+		c.l.Error("error calculating the hash in job %v: %s\n", tName, err.Error())
 		return
 	}
 	if strings.EqualFold(currentHash, c.lastCheckHash) {
-		log.Printf("Hashes are equal for job %v, skip writing", tName)
+		c.l.Info("Hashes are equal for job %v, skip writing", tName)
 		return
 	}
 	err = c.persist()
 	if err != nil {
-		log.Printf("error persisting updates for %v: %s\n", tName, err.Error())
+		c.l.Error("error persisting updates for %v: %s\n", tName, err.Error())
 		return
 	}
 	c.lastCheckHash = currentHash

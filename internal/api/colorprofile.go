@@ -1,9 +1,9 @@
 package api
 
 import (
-	"log"
 	"net/http"
 
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/pthum/stripcontrol-golang/internal/model"
 	"github.com/pthum/stripcontrol-golang/internal/service"
 	"github.com/samber/do"
@@ -24,12 +24,15 @@ type CPHandler interface {
 }
 type cpHandlerImpl struct {
 	cps service.CPService
+	l   alog.Logger
 }
 
 func NewCPHandler(i *do.Injector) (CPHandler, error) {
 	cps := do.MustInvoke[service.CPService](i)
+	l := alog.NewLogger("cphandler")
 	return &cpHandlerImpl{
 		cps: cps,
+		l:   l,
 	}, nil
 }
 
@@ -76,7 +79,7 @@ func (h *cpHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.cps.CreateColorProfile(&input); err != nil {
-		log.Printf("Error: %s", err)
+		h.l.Error("Error: %s", err)
 		handleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}

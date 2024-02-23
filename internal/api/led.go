@@ -1,10 +1,10 @@
 package api
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/pthum/stripcontrol-golang/internal/database"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	"github.com/pthum/stripcontrol-golang/internal/model"
 	"github.com/pthum/stripcontrol-golang/internal/service"
@@ -29,6 +29,7 @@ type ledHandlerImpl struct {
 	cpDbh database.DBHandler[model.ColorProfile]
 	mh    messaging.EventHandler
 	lsvc  service.LEDService
+	l     alog.Logger
 }
 
 func NewLEDHandler(i *do.Injector) (LEDHandler, error) {
@@ -36,11 +37,13 @@ func NewLEDHandler(i *do.Injector) (LEDHandler, error) {
 	cpdb := do.MustInvoke[database.DBHandler[model.ColorProfile]](i)
 	mh := do.MustInvoke[messaging.EventHandler](i)
 	lsvc := do.MustInvoke[service.LEDService](i)
+	l := alog.NewLogger("ledhandler")
 	return &ledHandlerImpl{
 		dbh:   lsdb,
 		cpDbh: cpdb,
 		mh:    mh,
 		lsvc:  lsvc,
+		l:     l,
 	}, nil
 }
 
@@ -90,7 +93,7 @@ func (lh *ledHandlerImpl) CreateLedStrip(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := lh.lsvc.CreateLEDStrip(&input); err != nil {
-		log.Printf("Error: %s", err)
+		lh.l.Error("Error: %s", err)
 		handleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
