@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 [ -z "$1" ] && echo "service name not given, exiting" && exit 1
 
 SFX=$RANDOM
