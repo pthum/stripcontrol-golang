@@ -1,13 +1,12 @@
 package api
 
 import (
-	"log"
 	"net/http"
 
-	"github.com/pthum/null"
-	"github.com/pthum/stripcontrol-golang/internal/database"
-	"github.com/pthum/stripcontrol-golang/internal/messaging"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
+	"github.com/samber/do"
 )
 
 const (
@@ -19,19 +18,25 @@ const (
 type CPHandler interface {
 	GetAllColorProfiles(w http.ResponseWriter, r *http.Request)
 	GetColorProfile(w http.ResponseWriter, r *http.Request)
-	UpdateLedStrip(w http.ResponseWriter, r *http.Request)
 	CreateColorProfile(w http.ResponseWriter, r *http.Request)
+	UpdateColorProfile(w http.ResponseWriter, r *http.Request)
+	DeleteColorProfile(w http.ResponseWriter, r *http.Request)
 }
-type CPHandlerImpl struct {
-	dbh database.DBHandler[model.ColorProfile]
-	mh  messaging.EventHandler
+type cpHandlerImpl struct {
+	cps service.CPService
+	l   alog.Logger
 }
 
-func colorProfileRoutes(db database.DBHandler[model.ColorProfile], mh messaging.EventHandler) []Route {
-	h := CPHandlerImpl{
-		dbh: db,
-		mh:  mh,
-	}
+func NewCPHandler(i *do.Injector) (CPHandler, error) {
+	cps := do.MustInvoke[service.CPService](i)
+	l := alog.NewLogger("cphandler")
+	return &cpHandlerImpl{
+		cps: cps,
+		l:   l,
+	}, nil
+}
+
+func (h *cpHandlerImpl) colorProfileRoutes() []Route {
 	return []Route{
 		{http.MethodGet, profilePath, h.GetAllColorProfiles},
 		{http.MethodPost, profilePath, h.CreateColorProfile},
@@ -42,8 +47,8 @@ func colorProfileRoutes(db database.DBHandler[model.ColorProfile], mh messaging.
 }
 
 // GetAllColorProfiles get all color profiles
-func (h *CPHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Request) {
-	profiles, err := h.dbh.GetAll()
+func (h *cpHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Request) {
+	profiles, err := h.cps.GetAll()
 	if err != nil {
 		handleError(&w, http.StatusNotFound, err.Error())
 		return
@@ -53,9 +58,9 @@ func (h *CPHandlerImpl) GetAllColorProfiles(w http.ResponseWriter, r *http.Reque
 }
 
 // GetColorProfile get a specific color profile
-func (h *CPHandlerImpl) GetColorProfile(w http.ResponseWriter, r *http.Request) {
+func (h *cpHandlerImpl) GetColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get model if exist
-	profile, err := h.dbh.Get(getParam(r, "id"))
+	profile, err := h.cps.GetColorProfile(getParam(r, "id"))
 	if err != nil {
 		handleError(&w, http.StatusNotFound, profileNotFoundMsg)
 		return
@@ -65,7 +70,7 @@ func (h *CPHandlerImpl) GetColorProfile(w http.ResponseWriter, r *http.Request) 
 }
 
 // CreateColorProfile create a color profile
-func (h *CPHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Request) {
+func (h *cpHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input model.ColorProfile
 	if err := bindJSON(r, &input); err != nil {
@@ -73,11 +78,8 @@ func (h *CPHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// generate an id
-	input.GenerateID()
-
-	if err := h.dbh.Create(&input); err != nil {
-		log.Printf("Error: %s", err)
+	if err := h.cps.CreateColorProfile(&input); err != nil {
+		h.l.Error("Error: %s", err)
 		handleError(&w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -85,48 +87,28 @@ func (h *CPHandlerImpl) CreateColorProfile(w http.ResponseWriter, r *http.Reques
 }
 
 // UpdateColorProfile update a color profile
-func (h *CPHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Request) {
-	// Get model if exist
-	profile, err := h.dbh.Get(getParam(r, "id"))
-	if err != nil {
-		handleError(&w, http.StatusNotFound, profileNotFoundMsg)
-		return
-	}
-
+func (h *cpHandlerImpl) UpdateColorProfile(w http.ResponseWriter, r *http.Request) {
 	// Validate input
 	var input model.ColorProfile
 	if err := bindJSON(r, &input); err != nil {
-		handleError(&w, http.StatusBadRequest, err.Error())
+		handleErr(&w, model.NewAppErr(http.StatusBadRequest, err))
 		return
 	}
 
-	if err := h.dbh.Update(*profile, input); err != nil {
-		handleError(&w, http.StatusBadRequest, err.Error())
+	if err := h.cps.UpdateColorProfile(getParam(r, "id"), input); err != nil {
+		handleErr(&w, err)
 		return
 	}
 
-	var event = model.NewProfileEvent(null.NewInt(input.ID, true), model.Save).With(input)
-	go h.mh.PublishProfileEvent(event)
-
-	handleJSON(&w, http.StatusOK, profile)
+	handleJSON(&w, http.StatusOK, input)
 }
 
 // DeleteColorProfile delete a color profile
-func (h *CPHandlerImpl) DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
-	// Get model if exist
-	profile, err := h.dbh.Get(getParam(r, "id"))
-	if err != nil {
-		handleError(&w, http.StatusNotFound, profileNotFoundMsg)
+func (h *cpHandlerImpl) DeleteColorProfile(w http.ResponseWriter, r *http.Request) {
+	if err := h.cps.DeleteColorProfile(getParam(r, "id")); err != nil {
+		handleErr(&w, err)
 		return
 	}
-
-	if err := h.dbh.Delete(profile); err != nil {
-		handleError(&w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	var event = model.NewProfileEvent(null.NewInt(profile.ID, true), model.Delete)
-	go h.mh.PublishProfileEvent(event)
 
 	handleJSON(&w, http.StatusNoContent, nil)
 }

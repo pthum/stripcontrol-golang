@@ -3,13 +3,15 @@ package messagingimpl
 import (
 	"github.com/pthum/stripcontrol-golang/internal/config"
 	"github.com/pthum/stripcontrol-golang/internal/messaging"
+	"github.com/samber/do"
 )
 
-func New(cfg config.MessagingConfig) messaging.EventHandler {
+func New(inj *do.Injector) (messaging.EventHandler, error) {
+	acfg := do.MustInvoke[*config.Config](inj)
 	// return NoOp implementation if disabled
-	if cfg.Disabled {
-		return &NoOpEventHandler{}
+	if acfg.Messaging.Disabled {
+		return &NoOpEventHandler{}, nil
 	}
 
-	return NewMQTT(cfg)
+	return NewMQTT(acfg.Messaging), nil
 }

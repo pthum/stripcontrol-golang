@@ -1,28 +1,28 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pthum/stripcontrol-golang/internal/database"
-	"github.com/pthum/stripcontrol-golang/internal/messaging"
-	"github.com/pthum/stripcontrol-golang/internal/model"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
+	"github.com/samber/do"
 )
 
 // NewRouter initializes a new router, setup with all routes
-func NewRouter(cpdb database.DBHandler[model.ColorProfile], lsdb database.DBHandler[model.LedStrip], mh messaging.EventHandler, enableDebug bool) *mux.Router {
+func NewRouter(i *do.Injector, enableDebug bool) *mux.Router {
+	l := alog.NewLogger("router")
 	router := mux.NewRouter().StrictSlash(true)
-
+	cph := do.MustInvoke[CPHandler](i).(*cpHandlerImpl)
+	lh := do.MustInvoke[LEDHandler](i).(*ledHandlerImpl)
 	var routes []Route
-	var cproutes = colorProfileRoutes(cpdb, mh)
-	var lroutes = ledRoutes(lsdb, cpdb, mh)
+	var cproutes = cph.colorProfileRoutes()
+	var lroutes = lh.ledRoutes()
 	routes = append(routes, cproutes...)
 	routes = append(routes, lroutes...)
 
 	for _, route := range routes {
-		log.Printf("appending \"%v\": %v %v \n", route.HandlerName(), route.Method, route.Pattern)
+		l.Info("appending \"%v\": %v %v \n", route.HandlerName(), route.Method, route.Pattern)
 		var handler http.Handler
 		handler = route.HandlerFunc
 		if enableDebug {
@@ -50,11 +50,12 @@ func NewRouter(cpdb database.DBHandler[model.ColorProfile], lsdb database.DBHand
 
 // RequestLogger logs the request and duration
 func RequestLogger(inner http.Handler) http.Handler {
+	lg := alog.NewLogger("request")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		inner.ServeHTTP(w, r)
 
-		log.Printf("[ %s ] %s %s", r.Method, r.RequestURI, time.Since(start))
+		lg.Debug("[ %s ] %s %s", r.Method, r.RequestURI, time.Since(start))
 	})
 }

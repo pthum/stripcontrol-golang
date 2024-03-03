@@ -5,339 +5,258 @@ import (
 	"io"
 	"net/http"
 	"testing"
-	"time"
 
-	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
+	servicemocks "github.com/pthum/stripcontrol-golang/internal/service/mocks"
+	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 type cphMocks struct {
-	*baseMocks
-	cph *CPHandlerImpl
+	cps *servicemocks.CPService
+	cph *cpHandlerImpl
 }
 
 func TestCPRoutes(t *testing.T) {
-	bm := createBaseMocks(t)
-	routes := colorProfileRoutes(bm.cpDbh, bm.mh)
+	mcks := createCPHandlerMocks(t)
+	routes := mcks.cph.colorProfileRoutes()
 	assert.Equal(t, 5, len(routes))
 }
 
 func TestGetAllColorProfiles(t *testing.T) {
-	tests := []getTest[model.ColorProfile]{
-		{
-			name:           "profiles_unavailable",
-			returnError:    errors.New("nothing found"),
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "profiles_available",
-			returnError:    nil,
-			returnObj:      createDummyProfile(),
-			expectedStatus: http.StatusOK,
-		},
-	}
+	mocks := createCPHandlerMocks(t)
+	expRet := createDummyProfile()
+	destarr := []model.ColorProfile{*expRet}
+	mocks.cps.
+		EXPECT().
+		GetAll().
+		Return(destarr, nil).
+		Once()
+	req, w := prepareHttpTest(http.MethodGet, profilePath, nil, nil)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createCPHandlerMocks(t)
-			destarr := []model.ColorProfile{}
-			if tc.returnError == nil {
-				destarr = append(destarr, *tc.returnObj)
-			}
-			mocks.cpDbh.
-				EXPECT().
-				GetAll().
-				Return(destarr, tc.returnError).
-				Once()
+	mocks.cph.GetAllColorProfiles(w, req)
 
-			req, w := prepareHttpTest(http.MethodGet, profilePath, nil, nil)
+	res := w.Result()
+	defer res.Body.Close()
+	var result []model.ColorProfile
+	bodyToObj(t, res, &result)
+	assert.Equal(t, *expRet, result[0])
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
 
-			mocks.cph.GetAllColorProfiles(w, req)
-			res := w.Result()
-			defer res.Body.Close()
+func TestGetAllColorProfiles_Error(t *testing.T) {
+	mocks := createCPHandlerMocks(t)
+	destarr := []model.ColorProfile{}
+	mocks.cps.
+		EXPECT().
+		GetAll().
+		Return(destarr, errors.New("get error")).
+		Once()
 
-			if tc.returnError == nil {
-				var result []model.ColorProfile
-				bodyToObj(t, res, &result)
+	req, w := prepareHttpTest(http.MethodGet, profilePath, nil, nil)
 
-				assert.Equal(t, *tc.returnObj, result[0])
-			}
+	mocks.cph.GetAllColorProfiles(w, req)
 
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func TestGetColorProfile(t *testing.T) {
-	tests := []getTest[model.ColorProfile]{
-		{
-			name:           "profile_unavailable",
-			returnError:    errors.New("nothing found"),
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "profile_available",
-			returnError:    nil,
-			returnObj:      createDummyProfile(),
-			expectedStatus: http.StatusOK,
-		},
-	}
+	mocks := createCPHandlerMocks(t)
+	retObj := createDummyProfile()
+	idS := idStringOrDefault(retObj, "9000")
+	mocks.cps.
+		EXPECT().
+		GetColorProfile(idS).
+		Return(retObj, nil)
+	req, w := prepareHttpTest(http.MethodGet, profileIDPath, uv{"id": idS}, nil)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createCPHandlerMocks(t)
-			idS := idStringOrDefault(tc.returnObj, "9000")
-			mocks.expectDBProfileGet(tc.returnObj, tc.returnError)
-			req, w := prepareHttpTest(http.MethodGet, profileIDPath, uv{"id": idS}, nil)
+	mocks.cph.GetColorProfile(w, req)
 
-			mocks.cph.GetColorProfile(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+	var result model.ColorProfile
+	bodyToObj(t, res, &result)
+	assert.Equal(t, *retObj, result)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
 
-			res := w.Result()
-			defer res.Body.Close()
+func TestGetColorProfile_Error(t *testing.T) {
+	mocks := createCPHandlerMocks(t)
+	retObj := createDummyProfile()
+	idS := idStringOrDefault(retObj, "9000")
+	mocks.cps.
+		EXPECT().
+		GetColorProfile(idS).
+		Return(retObj, errors.New("not found"))
+	req, w := prepareHttpTest(http.MethodGet, profileIDPath, uv{"id": idS}, nil)
 
-			if tc.returnError == nil {
-				var result model.ColorProfile
-				bodyToObj(t, res, &result)
-				assert.Equal(t, *tc.returnObj, result)
-			}
+	mocks.cph.GetColorProfile(w, req)
 
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func TestCreateColorProfile(t *testing.T) {
-	tests := []createTest[model.ColorProfile]{
-		{
-			name:           "success_case",
-			returnError:    nil,
-			body:           createDummyProfile(),
-			expectedStatus: http.StatusCreated,
-		},
-		{
-			name:           "missing_body",
-			returnError:    nil,
-			body:           nil,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error_on_save",
-			returnError:    errors.New("save failed"),
-			body:           createDummyProfile(),
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
+	mocks := createCPHandlerMocks(t)
+	inBody := createDummyProfile()
+	mocks.cps.
+		EXPECT().
+		CreateColorProfile(mock.Anything).
+		Return(nil).
+		Once()
+	body := objToReader(t, inBody)
+	req, w := prepareHttpTest(http.MethodPost, profilePath, nil, body)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createCPHandlerMocks(t)
-			var newId int64
-			var body io.Reader
-			if tc.body != nil {
-				mocks.cpDbh.
-					EXPECT().
-					Create(mock.Anything).
-					Run(func(input *model.ColorProfile) {
-						// id should have been generated
-						assert.NotEqual(t, tc.body.ID, input.ID)
-						newId = input.ID
-					}).
-					Return(tc.returnError).
-					Once()
-				body = objToReader(t, tc.body)
-			}
-			req, w := prepareHttpTest(http.MethodPost, profilePath, nil, body)
+	mocks.cph.CreateColorProfile(w, req)
 
-			mocks.cph.CreateColorProfile(w, req)
-			res := w.Result()
-			defer res.Body.Close()
+	res := w.Result()
+	defer res.Body.Close()
+	expectedObj := inBody
+	var result model.ColorProfile
+	bodyToObj(t, res, &result)
 
-			if tc.body != nil && tc.returnError == nil {
-				expectedObj := tc.body
-				expectedObj.ID = newId
-				var result model.ColorProfile
-				bodyToObj(t, res, &result)
+	assert.Equal(t, *expectedObj, result)
+	assert.Contains(t, res.Header["Location"][0], idStr(expectedObj.ID))
 
-				assert.Equal(t, *expectedObj, result)
-				assert.Contains(t, res.Header["Location"][0], idStr(newId))
-			}
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
+func TestCreateColorProfile_MissingBody(t *testing.T) {
+	mocks := createCPHandlerMocks(t)
+	var body io.Reader
+	req, w := prepareHttpTest(http.MethodPost, profilePath, nil, body)
+
+	mocks.cph.CreateColorProfile(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateColorProfile_Error(t *testing.T) {
+	mocks := createCPHandlerMocks(t)
+	inBody := createDummyProfile()
+	mocks.cps.
+		EXPECT().
+		CreateColorProfile(mock.Anything).
+		Return(errors.New("save failed")).
+		Once()
+	body := objToReader(t, inBody)
+	req, w := prepareHttpTest(http.MethodPost, profilePath, nil, body)
+
+	mocks.cph.CreateColorProfile(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
 func TestDeleteColorProfile(t *testing.T) {
-	tests := []deleteTest[model.ColorProfile]{
-		{
-			name:           "success_case",
-			getObj:         createDummyProfile(),
-			getError:       nil,
-			deleteError:    nil,
-			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:           "missing_profile_to_delete",
-			getObj:         nil,
-			getError:       errors.New("not found"),
-			deleteError:    nil,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "error_on_delete",
-			getObj:         createDummyProfile(),
-			getError:       nil,
-			deleteError:    errors.New("delete failed"),
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
+	mocks := createCPHandlerMocks(t)
+	getObj := createDummyProfile()
+	mocks.cps.
+		EXPECT().
+		DeleteColorProfile(mock.Anything).
+		Return(nil)
+	idS := idStringOrDefault(getObj, "9000")
+	req, w := prepareHttpTest(http.MethodDelete, profileIDPath, uv{"id": idS}, nil)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createCPHandlerMocks(t)
+	mocks.cph.DeleteColorProfile(w, req)
 
-			mocks.expectDBProfileGet(tc.getObj, tc.getError)
+	res := w.Result()
+	defer res.Body.Close()
 
-			if tc.getError == nil {
-				mocks.cpDbh.
-					EXPECT().
-					Delete(mock.Anything).
-					Return(tc.deleteError)
-				if tc.deleteError == nil {
-					mocks.expectPublishProfileEvent(t, model.Delete, tc.getObj.ID, nil)
-				}
-			}
-			idS := idStringOrDefault(tc.getObj, "9000")
-			req, w := prepareHttpTest(http.MethodDelete, profileIDPath, uv{"id": idS}, nil)
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+}
 
-			mocks.cph.DeleteColorProfile(w, req)
+func TestDeleteColorProfile_Error(t *testing.T) {
+	mocks := createCPHandlerMocks(t)
+	getObj := createDummyProfile()
+	mocks.cps.
+		EXPECT().
+		DeleteColorProfile(mock.Anything).
+		Return(model.NewAppErr(400, errors.New("delete error")))
+	idS := idStringOrDefault(getObj, "9000")
+	req, w := prepareHttpTest(http.MethodDelete, profileIDPath, uv{"id": idS}, nil)
 
-			// small sleep to have the async routines run
-			time.Sleep(50 * time.Millisecond)
+	mocks.cph.DeleteColorProfile(w, req)
 
-			res := w.Result()
-			defer res.Body.Close()
+	res := w.Result()
+	defer res.Body.Close()
 
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 func TestUpdateColorProfile(t *testing.T) {
-	tests := []updateTest[model.ColorProfile]{
-		{
-			name:           "success_case",
-			body:           createDummyProfile(),
-			getError:       nil,
-			updateError:    nil,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "missing_profile_to_update",
-			body:           nil,
-			getError:       errors.New("not found"),
-			updateError:    nil,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "missing_profile_body",
-			body:           nil,
-			getError:       nil,
-			updateError:    nil,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error_on_update",
-			body:           createDummyProfile(),
-			getError:       nil,
-			updateError:    errors.New("update failed"),
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
+	mocks := createCPHandlerMocks(t)
+	inBody := createDummyProfile()
+	body := objToReader(t, inBody)
+	dbO := *createProfile(105, 100, 100, 100, 2)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createCPHandlerMocks(t)
-
-			dbO := *createProfile(105, 100, 100, 100, 2)
-
-			mocks.expectDBProfileGet(&dbO, tc.getError)
-
-			var body io.Reader
-			if tc.body != nil {
-				body = objToReader(t, tc.body)
-				mocks.cpDbh.
-					EXPECT().
-					Update(dbO, *tc.body).
-					Return(tc.updateError)
-
-				if tc.updateError == nil {
-					mocks.expectPublishProfileEvent(t, model.Save, tc.body.ID, tc.body)
-				}
-			}
-
-			idS := idStr(dbO.ID)
-			req, w := prepareHttpTest(http.MethodPut, profileIDPath, uv{"id": idS}, body)
-
-			mocks.cph.UpdateColorProfile(w, req)
-
-			// small sleep to have the async routines run
-			time.Sleep(50 * time.Millisecond)
-
-			res := w.Result()
-			defer res.Body.Close()
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
-}
-
-func (chm *cphMocks) expectPublishProfileEvent(t *testing.T, typ model.EventType, id int64, body *model.ColorProfile) {
-	chm.mh.
+	mocks.cps.
 		EXPECT().
-		PublishProfileEvent(mock.Anything).
-		Run(func(event *model.ProfileEvent) {
-			assert.Equal(t, typ, event.Type)
-			assert.Equal(t, id, event.ID.Int64)
-			if body != nil {
-				assert.Equal(t, *body, event.State.Profile)
-			}
-			assert.Equal(t, body != nil, event.State.Valid)
-		}).
+		UpdateColorProfile(mock.Anything, mock.Anything).
 		Return(nil)
+
+	idS := idStr(dbO.ID)
+	req, w := prepareHttpTest(http.MethodPut, profileIDPath, uv{"id": idS}, body)
+
+	mocks.cph.UpdateColorProfile(w, req)
+
+	res := w.Result()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func idStringOrDefault(obj *model.ColorProfile, def string) string {
-	idS := def
-	if obj != nil {
-		idS = idStr(obj.ID)
-	}
-	return idS
+func TestUpdateColorProfile_MissingBody(t *testing.T) {
+	mocks := createCPHandlerMocks(t)
+	var body io.Reader
+	dbO := *createProfile(105, 100, 100, 100, 2)
+
+	idS := idStr(dbO.ID)
+	req, w := prepareHttpTest(http.MethodPut, profileIDPath, uv{"id": idS}, body)
+
+	mocks.cph.UpdateColorProfile(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func createDummyProfile() *model.ColorProfile {
-	return createProfile(185, 123, 234, 12, 1)
-}
+func TestUpdateColorProfile_Error(t *testing.T) {
+	mocks := createCPHandlerMocks(t)
+	inBody := createDummyProfile()
+	body := objToReader(t, inBody)
+	dbO := *createProfile(105, 100, 100, 100, 2)
+	mocks.cps.
+		EXPECT().
+		UpdateColorProfile(mock.Anything, mock.Anything).
+		Return(model.NewAppErr(400, errors.New("update failed")))
 
-func createProfile(id, red, green, blue, brightness int64) *model.ColorProfile {
-	return &model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: id},
-		Red:        null.IntFrom(red),
-		Green:      null.IntFrom(green),
-		Blue:       null.IntFrom(blue),
-		Brightness: null.IntFrom(brightness),
-	}
+	idS := idStr(dbO.ID)
+	req, w := prepareHttpTest(http.MethodPut, profileIDPath, uv{"id": idS}, body)
+
+	mocks.cph.UpdateColorProfile(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 func createCPHandlerMocks(t *testing.T) *cphMocks {
-	bm := createBaseMocks(t)
+	i := do.New()
+	cps := servicemocks.NewCPService(t)
+	do.ProvideValue[service.CPService](i, cps)
+	cph, err := NewCPHandler(i)
+	assert.NoError(t, err)
 	return &cphMocks{
-		baseMocks: bm,
-		cph: &CPHandlerImpl{
-			dbh: bm.cpDbh,
-			mh:  bm.mh,
-		},
+		cps: cps,
+		cph: cph.(*cpHandlerImpl),
 	}
 }

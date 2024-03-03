@@ -9,346 +9,294 @@ import (
 
 	"github.com/pthum/null"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
+	servicemocks "github.com/pthum/stripcontrol-golang/internal/service/mocks"
+	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 type lhMocks struct {
 	*baseMocks
-	lh *LEDHandlerImpl
+	lsvc *servicemocks.LEDService
+	lh   *ledHandlerImpl
 }
 
 func TestLedRoutes(t *testing.T) {
-	bm := createBaseMocks(t)
-	routes := ledRoutes(bm.lsDbh, bm.cpDbh, bm.mh)
+	mcks := createLEDHandlerMocks(t)
+	routes := mcks.lh.ledRoutes()
 	assert.Equal(t, 8, len(routes))
 }
 
-func TestGetAllLedStrips(t *testing.T) {
-	tests := []getTest[model.LedStrip]{
-		{
-			name:           "strips_unavailable",
-			returnError:    errors.New("nothing found"),
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "strips_available",
-			returnError:    nil,
-			returnObj:      createValidDummyStrip(),
-			expectedStatus: http.StatusOK,
-		},
-	}
+func TestGetAllLEDStrips(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	destarr := []model.LedStrip{*createValidDummyStrip()}
+	mocks.lsvc.
+		EXPECT().
+		GetAll().
+		Return(destarr, nil).
+		Once()
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
-			destarr := []model.LedStrip{}
-			if tc.returnError == nil {
-				destarr = append(destarr, *tc.returnObj)
-			}
-			mocks.lsDbh.
-				EXPECT().
-				GetAll().
-				Return(destarr, tc.returnError).
-				Once()
+	req, w := prepareHttpTest(http.MethodGet, ledstripPath, nil, nil)
 
-			req, w := prepareHttpTest(http.MethodGet, ledstripPath, nil, nil)
+	mocks.lh.GetAllLedStrips(w, req)
+	res := w.Result()
+	defer res.Body.Close()
 
-			mocks.lh.GetAllLedStrips(w, req)
-			res := w.Result()
-			defer res.Body.Close()
+	var result []model.LedStrip
+	bodyToObj(t, res, &result)
 
-			if tc.returnError == nil {
-				var result []model.LedStrip
-				bodyToObj(t, res, &result)
-
-				assert.Equal(t, *tc.returnObj, result[0])
-			}
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	assert.Equal(t, destarr[0], result[0])
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestGetLedStrips(t *testing.T) {
-	tests := []getTest[model.LedStrip]{
-		{
-			name:           "strip_unavailable",
-			returnError:    errors.New("nothing found"),
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "strip_available",
-			returnError:    nil,
-			returnObj:      createValidDummyStrip(),
-			expectedStatus: http.StatusOK,
-		},
-	}
+func TestGetAllLEDStrips_Error(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	destarr := []model.LedStrip{}
+	mocks.lsvc.
+		EXPECT().
+		GetAll().
+		Return(destarr, assert.AnError).
+		Once()
+	req, w := prepareHttpTest(http.MethodGet, ledstripPath, nil, nil)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
+	mocks.lh.GetAllLedStrips(w, req)
+	res := w.Result()
+	defer res.Body.Close()
 
-			reqId := "6000"
-			if tc.returnObj != nil {
-				reqId = idStr(tc.returnObj.ID)
-			}
-			mocks.expectDBStripGet(tc.returnObj, tc.returnError)
-			req, w := prepareHttpTest(http.MethodGet, ledstripIDPath, uv{"id": reqId}, nil)
-
-			mocks.lh.GetLedStrip(w, req)
-			res := w.Result()
-			defer res.Body.Close()
-
-			if tc.returnError == nil {
-				var result model.LedStrip
-				bodyToObj(t, res, &result)
-
-				assert.Equal(t, *tc.returnObj, result)
-			}
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
-func TestCreateLedStrip(t *testing.T) {
-	tests := []createTest[model.LedStrip]{
-		{
-			name:           "success case",
-			returnError:    nil,
-			body:           createValidDummyStrip(),
-			expectedStatus: http.StatusCreated,
-		},
-		{
-			name:           "missing body",
-			returnError:    nil,
-			body:           nil,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error on save",
-			returnError:    errors.New("save failed"),
-			body:           createValidDummyStrip(),
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error on publish",
-			body:           createValidDummyStrip(),
-			publishError:   errors.New("publish failed"),
-			expectedStatus: http.StatusCreated,
-		},
-	}
+func TestGetLEDStrip(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	retObj := createValidDummyStrip()
+	reqId := idStr(retObj.ID)
+	mocks.lsvc.
+		EXPECT().
+		GetLEDStrip(reqId).
+		Return(retObj, nil).
+		Once()
+	req, w := prepareHttpTest(http.MethodGet, ledstripIDPath, uv{"id": reqId}, nil)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
-			var newId int64
-			var body io.Reader
-			if tc.body != nil {
-				mocks.lsDbh.
-					EXPECT().
-					Create(mock.Anything).
-					Run(func(input *model.LedStrip) {
-						// id should have been generated
-						assert.NotEqual(t, tc.body.ID, input.ID)
-						newId = input.ID
-					}).
-					Return(tc.returnError).
-					Once()
-				body = objToReader(t, tc.body)
-				if tc.returnError == nil {
-					mocks.expectPublishStripEvent(t, model.Save, newId, true, false, tc.publishError)
-				}
-			}
+	mocks.lh.GetLedStrip(w, req)
+	res := w.Result()
+	defer res.Body.Close()
 
-			req, w := prepareHttpTest(http.MethodPost, ledstripPath, nil, body)
+	var result model.LedStrip
+	bodyToObj(t, res, &result)
 
-			mocks.lh.CreateLedStrip(w, req)
-
-			// small sleep to have the async routines run
-			time.Sleep(50 * time.Millisecond)
-
-			res := w.Result()
-			defer res.Body.Close()
-
-			if tc.body != nil && tc.returnError == nil {
-				expectedObj := tc.body
-				expectedObj.ID = newId
-				var result model.LedStrip
-				bodyToObj(t, res, &result)
-
-				assert.Equal(t, *expectedObj, result)
-				assert.Contains(t, res.Header["Location"][0], idStr(newId))
-			}
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	assert.Equal(t, *retObj, result)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestDeleteLedStrip(t *testing.T) {
-	tests := []deleteTest[model.LedStrip]{
-		{
-			name:           "success case",
-			getObj:         createValidDummyStrip(),
-			getError:       nil,
-			deleteError:    nil,
-			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:           "missing strip to delete",
-			getObj:         nil,
-			getError:       errors.New("not found"),
-			deleteError:    nil,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "error on delete",
-			getObj:         createValidDummyStrip(),
-			getError:       nil,
-			deleteError:    errors.New("delete failed"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error on delete",
-			getObj:         createValidDummyStrip(),
-			getError:       nil,
-			publishError:   errors.New("publish failed"),
-			expectedStatus: http.StatusNoContent,
-		},
-	}
+func TestGetLEDStrip_Error(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	reqId := "6000"
+	mocks.lsvc.
+		EXPECT().
+		GetLEDStrip(reqId).
+		Return(nil, errors.New("nothing found")).
+		Once()
+	req, w := prepareHttpTest(http.MethodGet, ledstripIDPath, uv{"id": reqId}, nil)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
+	mocks.lh.GetLedStrip(w, req)
+	res := w.Result()
+	defer res.Body.Close()
 
-			mocks.expectDBStripGet(tc.getObj, tc.getError)
+	var result model.LedStrip
+	bodyToObj(t, res, &result)
 
-			if tc.getError == nil {
-				mocks.lsDbh.
-					EXPECT().
-					Delete(mock.Anything).
-					Return(tc.deleteError)
-				if tc.deleteError == nil {
-					mocks.expectPublishStripEvent(t, model.Delete, tc.getObj.ID, false, false, tc.publishError)
-				}
-			}
-
-			req, w := prepareHttpTest(http.MethodDelete, ledstripIDPath, uv{"id": "185"}, nil)
-
-			mocks.lh.DeleteLedStrip(w, req)
-
-			// small sleep to have the async routines run
-			time.Sleep(50 * time.Millisecond)
-
-			res := w.Result()
-			defer res.Body.Close()
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
-func TestUpdateLedStrip(t *testing.T) {
+func TestCreateLEDStrip(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	reqObj := createValidDummyStrip()
 
-	dbObj := model.LedStrip{
-		BaseModel:   model.BaseModel{ID: 185},
-		Description: "TestFromDb",
-		Enabled:     false,
-		MisoPin:     null.IntFrom(100),
-		Name:        "TestFromDb",
-		NumLeds:     null.IntFrom(99),
-		SclkPin:     null.IntFrom(99),
-		SpeedHz:     null.IntFrom(80001),
-		ProfileID:   null.IntFrom(15),
-	}
+	mocks.lsvc.
+		EXPECT().
+		CreateLEDStrip(mock.Anything).
+		Return(nil).
+		Once()
 
+	body := objToReader(t, reqObj)
+	req, w := prepareHttpTest(http.MethodPost, ledstripPath, nil, body)
+
+	mocks.lh.CreateLedStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	expectedObj := reqObj
+	var result model.LedStrip
+	bodyToObj(t, res, &result)
+
+	assert.Equal(t, *expectedObj, result)
+	assert.Contains(t, res.Header["Location"][0], idStr(expectedObj.ID))
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+}
+
+func TestCreateLEDStrip_MissingBody(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	var body io.Reader
+	req, w := prepareHttpTest(http.MethodPost, ledstripPath, nil, body)
+
+	mocks.lh.CreateLedStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateLEDStrip_Error(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	reqObj := createValidDummyStrip()
+	mocks.lsvc.
+		EXPECT().
+		CreateLEDStrip(mock.Anything).
+		Return(assert.AnError).
+		Once()
+	body := objToReader(t, reqObj)
+	req, w := prepareHttpTest(http.MethodPost, ledstripPath, nil, body)
+
+	mocks.lh.CreateLedStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestDeleteLEDStrip(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	mocks.lsvc.
+		EXPECT().
+		DeleteLEDStrip(mock.Anything).
+		Return(nil).
+		Once()
+	req, w := prepareHttpTest(http.MethodDelete, ledstripIDPath, uv{"id": "185"}, nil)
+
+	mocks.lh.DeleteLedStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+}
+
+func TestDeleteLEDStrip_DeleteError(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	mocks.lsvc.
+		EXPECT().
+		DeleteLEDStrip(mock.Anything).
+		Return(assert.AnError).
+		Once()
+	req, w := prepareHttpTest(http.MethodDelete, ledstripIDPath, uv{"id": "185"}, nil)
+
+	mocks.lh.DeleteLedStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+}
+
+func TestUpdateLEDStrip(t *testing.T) {
 	inputObj := createValidDummyStrip()
 	inputObj.ProfileID = null.IntFrom(15)
+	fakeProfile := createDummyProfile()
+	fakeProfile.ID = inputObj.ProfileID.Int64
 
-	fakeProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 15},
-		Red:        null.IntFrom(100),
-		Green:      null.IntFrom(100),
-		Blue:       null.IntFrom(100),
-		Brightness: null.IntFrom(2),
-	}
+	mocks := createLEDHandlerMocks(t)
+	body := objToReader(t, inputObj)
+	mocks.lsvc.
+		EXPECT().
+		UpdateLEDStrip(mock.Anything, mock.Anything).
+		Return(nil).
+		Once()
 
-	tests := []updateTest[model.LedStrip]{
-		{
-			name:           "success case",
-			body:           inputObj,
-			getError:       nil,
-			updateError:    nil,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "missing profile to update",
-			body:           nil,
-			getError:       errors.New("not found"),
-			updateError:    nil,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "missing profile body",
-			body:           nil,
-			getError:       nil,
-			updateError:    nil,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:        "error on update",
-			body:        inputObj,
-			getError:    nil,
-			updateError: errors.New("update failed"),
-			// we ignore errors on update for the sake of performance, see comment in UpdateLedStrip
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:         "publish error",
-			body:         inputObj,
-			publishError: errors.New("publish error"),
-			// we ignore errors on update for the sake of performance, see comment in UpdateLedStrip
-			expectedStatus: http.StatusOK,
-		},
-	}
+	req, w := prepareHttpTest(http.MethodPut, ledstripIDPath, uv{"id": "185"}, body)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
+	mocks.lh.UpdateLedStrip(w, req)
 
-			mocks.expectDBStripGet(&dbObj, tc.getError)
+	res := w.Result()
+	defer res.Body.Close()
 
-			var body io.Reader
-			if tc.body != nil {
-				body = objToReader(t, tc.body)
-				mocks.lsDbh.
-					EXPECT().
-					Update(dbObj, *tc.body).
-					Return(tc.updateError)
-				if tc.updateError == nil {
-					mocks.expectPublishStripEvent(t, model.Save, tc.body.ID, true, true, tc.publishError)
-					mocks.expectDBProfileGet(&fakeProfile, nil)
-				}
-			}
-
-			req, w := prepareHttpTest(http.MethodPut, ledstripIDPath, uv{"id": "185"}, body)
-
-			mocks.lh.UpdateLedStrip(w, req)
-
-			// small sleep to have the async routines run
-			time.Sleep(50 * time.Millisecond)
-
-			res := w.Result()
-			defer res.Body.Close()
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestGetProfileForLedStrip(t *testing.T) {
+func TestUpdateLEDStrip_MissingBody(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	var body io.Reader
+	req, w := prepareHttpTest(http.MethodPut, ledstripIDPath, uv{"id": "185"}, body)
+
+	mocks.lh.UpdateLedStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestUpdateLEDStrip_UpdateError(t *testing.T) {
+	inputObj := createValidDummyStrip()
+	inputObj.ProfileID = null.IntFrom(15)
+	mocks := createLEDHandlerMocks(t)
+	mocks.lsvc.
+		EXPECT().
+		UpdateLEDStrip(mock.Anything, mock.Anything).
+		Return(assert.AnError).
+		Once()
+	body := objToReader(t, inputObj)
+	req, w := prepareHttpTest(http.MethodPut, ledstripIDPath, uv{"id": "185"}, body)
+
+	mocks.lh.UpdateLedStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+}
+
+func TestGetProfileForLEDStrip(t *testing.T) {
+	fakeProfile := createDummyProfile()
+	returnObj := createValidDummyStrip()
+	returnObj.ProfileID = null.IntFrom(fakeProfile.ID)
+	mocks := createLEDHandlerMocks(t)
+	stripIdStr := idStr(returnObj.ID)
+	mocks.lsvc.
+		EXPECT().
+		GetProfileForStrip(stripIdStr).
+		Return(fakeProfile, nil).
+		Once()
+
+	req, w := prepareHttpTest(http.MethodGet, ledstripIDProfilePath, uv{"id": stripIdStr}, nil)
+
+	mocks.lh.GetProfileForStrip(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+
+	var result model.ColorProfile
+	bodyToObj(t, res, &result)
+	assert.Equal(t, *fakeProfile, result)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
+
+func TestGetProfileForLEDStrip_Error(t *testing.T) {
+	returnObj := createValidDummyStrip()
+	mocks := createLEDHandlerMocks(t)
+	stripIdStr := idStr(returnObj.ID)
+	mocks.lsvc.
+		EXPECT().
+		GetProfileForStrip(stripIdStr).
+		Return(nil, assert.AnError).
+		Once()
+	req, w := prepareHttpTest(http.MethodGet, ledstripIDProfilePath, uv{"id": stripIdStr}, nil)
+
+	mocks.lh.GetProfileForStrip(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+}
+
+func TestUpdateProfileForLEDStrip(t *testing.T) {
 	returnObj := model.LedStrip{
 		BaseModel:   model.BaseModel{ID: 185},
 		Description: "Test",
@@ -360,78 +308,35 @@ func TestGetProfileForLedStrip(t *testing.T) {
 		SpeedHz:     null.IntFrom(80000),
 		ProfileID:   null.IntFrom(15),
 	}
-
-	fakeProfile := model.ColorProfile{
-		BaseModel:  model.BaseModel{ID: 15},
-		Red:        null.IntFrom(100),
-		Green:      null.IntFrom(100),
-		Blue:       null.IntFrom(100),
+	updateProfile := model.ColorProfile{
+		BaseModel:  model.BaseModel{ID: 16},
+		Red:        null.IntFrom(123),
+		Green:      null.IntFrom(123),
+		Blue:       null.IntFrom(123),
 		Brightness: null.IntFrom(2),
 	}
+	mocks := createLEDHandlerMocks(t)
+	getStripIdStr := idStr(returnObj.ID)
+	mocks.lsvc.
+		EXPECT().
+		UpdateProfileForStrip(getStripIdStr, mock.Anything).
+		Return(&updateProfile, nil).
+		Once()
+	body := objToReader(t, updateProfile)
+	req, w := prepareHttpTest(http.MethodPut, ledstripIDProfilePath, uv{"id": getStripIdStr}, body)
 
-	tests := []struct {
-		name            string
-		getStripError   error
-		getStrip        model.LedStrip
-		getProfileError error
-		expectedStatus  int
-	}{
-		{
-			name:           "success case",
-			getStripError:  nil,
-			getStrip:       returnObj,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "strip missing",
-			getStripError:  errors.New("strip not found"),
-			getStrip:       returnObj,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "no profile referenced",
-			getStripError:  nil,
-			getStrip:       *createValidDummyStrip(),
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:            "profile missing",
-			getStripError:   nil,
-			getStrip:        returnObj,
-			getProfileError: errors.New("profile not found"),
-			expectedStatus:  http.StatusNotFound,
-		},
-	}
+	mocks.lh.UpdateProfileForStrip(w, req)
+	time.Sleep(50 * time.Millisecond)
+	res := w.Result()
+	defer res.Body.Close()
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
-
-			stripIdStr := idStr(tc.getStrip.ID)
-			mocks.expectDBStripGet(&tc.getStrip, tc.getStripError)
-
-			if tc.getStripError == nil && tc.getStrip.ProfileID.Valid == true {
-				mocks.expectDBProfileGet(&fakeProfile, tc.getProfileError)
-			}
-
-			req, w := prepareHttpTest(http.MethodGet, ledstripIDProfilePath, uv{"id": stripIdStr}, nil)
-
-			mocks.lh.GetProfileForStrip(w, req)
-			res := w.Result()
-			defer res.Body.Close()
-
-			if tc.getStripError == nil && tc.getStrip.ProfileID.Valid == true && tc.getProfileError == nil {
-				var result model.ColorProfile
-				bodyToObj(t, res, &result)
-				assert.Equal(t, fakeProfile, result)
-			}
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
+	var result model.ColorProfile
+	bodyToObj(t, res, &result)
+	assert.Equal(t, updateProfile, result)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestUpdateProfileForLedStrip(t *testing.T) {
+func TestUpdateProfileForLEDStrip_Error(t *testing.T) {
 	returnObj := model.LedStrip{
 		BaseModel:   model.BaseModel{ID: 185},
 		Description: "Test",
@@ -452,195 +357,72 @@ func TestUpdateProfileForLedStrip(t *testing.T) {
 		Brightness: null.IntFrom(2),
 	}
 
-	tests := []struct {
-		name            string
-		getStripError   error
-		getStrip        model.LedStrip
-		body            *model.ColorProfile
-		getProfileError error
-		saveError       error
-		publishError    error
-		expectedStatus  int
-	}{
-		{
-			name:           "success case",
-			getStripError:  nil,
-			getStrip:       returnObj,
-			body:           &updateProfile,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "strip missing",
-			getStripError:  errors.New("strip not found"),
-			getStrip:       returnObj,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:            "body missing",
-			getStripError:   nil,
-			getStrip:        returnObj,
-			getProfileError: nil,
-			body:            nil,
-			expectedStatus:  http.StatusBadRequest,
-		},
-		{
-			name:            "profile missing",
-			getStripError:   nil,
-			getStrip:        returnObj,
-			getProfileError: errors.New("profile not found"),
-			body:            &updateProfile,
-			expectedStatus:  http.StatusNotFound,
-		},
-		{
-			name:           "strip save error",
-			getStripError:  nil,
-			getStrip:       returnObj,
-			body:           &updateProfile,
-			saveError:      errors.New("save error"),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		{
-			name:           "strip publish error",
-			getStripError:  nil,
-			getStrip:       returnObj,
-			body:           &updateProfile,
-			publishError:   errors.New("publish error"),
-			expectedStatus: http.StatusOK,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
-			getStripIdStr := idStr(tc.getStrip.ID)
-			mocks.expectDBStripGet(&tc.getStrip, tc.getStripError)
-
-			if tc.getStripError == nil && tc.body != nil {
-				mocks.expectDBProfileGet(tc.body, tc.getProfileError)
-
-				if tc.getProfileError == nil {
-					mocks.expectDBStripSave(tc.saveError)
-
-					if tc.saveError == nil {
-						mocks.expectPublishStripEvent(t, model.Save, tc.getStrip.ID, true, true, tc.publishError)
-					}
-				}
-			}
-
-			var body io.Reader
-			if tc.body != nil {
-				body = objToReader(t, tc.body)
-			}
-
-			req, w := prepareHttpTest(http.MethodPut, ledstripIDProfilePath, uv{"id": getStripIdStr}, body)
-
-			mocks.lh.UpdateProfileForStrip(w, req)
-			time.Sleep(50 * time.Millisecond)
-			res := w.Result()
-			defer res.Body.Close()
-
-			if tc.getStripError == nil && tc.getProfileError == nil && tc.body != nil && tc.saveError == nil {
-				var result model.ColorProfile
-				bodyToObj(t, res, &result)
-				assert.Equal(t, *tc.body, result)
-			}
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
-}
-
-func TestRemoveProfileForLedStrip(t *testing.T) {
-	tests := []struct {
-		name           string
-		getStripError  error
-		getStrip       model.LedStrip
-		saveError      error
-		publishError   error
-		expectedStatus int
-	}{
-		{
-			name:           "success case",
-			getStripError:  nil,
-			getStrip:       *createValidDummyStrip(),
-			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:           "strip missing",
-			getStripError:  errors.New("strip not found"),
-			getStrip:       *createValidDummyStrip(),
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "save error",
-			getStripError:  nil,
-			getStrip:       *createValidDummyStrip(),
-			saveError:      errors.New("save error"),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		{
-			name:           "publish error",
-			getStripError:  nil,
-			getStrip:       *createValidDummyStrip(),
-			publishError:   errors.New("publish error"),
-			expectedStatus: http.StatusNoContent,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mocks := createLEDHandlerMocks(t)
-			getStripIdStr := idStr(tc.getStrip.ID)
-			mocks.expectDBStripGet(&tc.getStrip, tc.getStripError)
-
-			if tc.getStripError == nil {
-				mocks.expectDBStripSave(tc.saveError)
-				if tc.saveError == nil {
-					mocks.expectPublishStripEvent(t, model.Save, tc.getStrip.ID, true, false, tc.publishError)
-				}
-			}
-
-			req, w := prepareHttpTest(http.MethodDelete, ledstripIDProfilePath, uv{"id": getStripIdStr}, nil)
-
-			mocks.lh.RemoveProfileForStrip(w, req)
-			time.Sleep(50 * time.Millisecond)
-			res := w.Result()
-			defer res.Body.Close()
-
-			assert.Equal(t, tc.expectedStatus, res.StatusCode)
-		})
-	}
-}
-func (lhm *lhMocks) expectDBStripGet(getStrip *model.LedStrip, getStripError error) {
-	getStripIdStr := mock.Anything
-	if getStrip != nil {
-		getStripIdStr = idStr(getStrip.ID)
-	}
-	lhm.lsDbh.
+	mocks := createLEDHandlerMocks(t)
+	getStripIdStr := idStr(returnObj.ID)
+	mocks.lsvc.
 		EXPECT().
-		Get(getStripIdStr).
-		Return(getStrip, getStripError).
+		UpdateProfileForStrip(getStripIdStr, mock.Anything).
+		Return(nil, assert.AnError).
 		Once()
+	body := objToReader(t, updateProfile)
+	req, w := prepareHttpTest(http.MethodPut, ledstripIDProfilePath, uv{"id": getStripIdStr}, body)
+
+	mocks.lh.UpdateProfileForStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 }
 
-func (lhm *lhMocks) expectDBStripSave(saveError error) {
-	lhm.lsDbh.
-		EXPECT().
-		Save(mock.Anything).
-		Return(saveError)
+func TestUpdateProfileForLEDStrip_MissingBody(t *testing.T) {
+	mocks := createLEDHandlerMocks(t)
+	getStripIdStr := "6000"
+	var body io.Reader
+	req, w := prepareHttpTest(http.MethodPut, ledstripIDProfilePath, uv{"id": getStripIdStr}, body)
+
+	mocks.lh.UpdateProfileForStrip(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func (lhm *lhMocks) expectPublishStripEvent(t *testing.T, typ model.EventType, id int64, valid bool, expectProfile bool, publishError error) {
-	lhm.mh.
+func TestRemoveProfileForLEDStrip(t *testing.T) {
+	getStrip := createValidDummyStrip()
+	mocks := createLEDHandlerMocks(t)
+	getStripIdStr := idStr(getStrip.ID)
+	mocks.lsvc.
 		EXPECT().
-		PublishStripEvent(mock.Anything).
-		Run(func(event *model.StripEvent) {
-			assert.Equal(t, typ, event.Type)
-			assert.Equal(t, id, event.ID.Int64)
-			assert.Equal(t, valid, event.Strip.Valid)
-			assert.Equal(t, expectProfile, event.Strip.Strip.Profile.Valid)
-		}).
-		Return(publishError)
+		RemoveProfileForStrip(getStripIdStr).
+		Return(nil).
+		Once()
+
+	req, w := prepareHttpTest(http.MethodDelete, ledstripIDProfilePath, uv{"id": getStripIdStr}, nil)
+
+	mocks.lh.RemoveProfileForStrip(w, req)
+	time.Sleep(50 * time.Millisecond)
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+}
+
+func TestRemoveProfileForLEDStrip_Error(t *testing.T) {
+	getStrip := createValidDummyStrip()
+	mocks := createLEDHandlerMocks(t)
+	getStripIdStr := idStr(getStrip.ID)
+	mocks.lsvc.
+		EXPECT().
+		RemoveProfileForStrip(getStripIdStr).
+		Return(assert.AnError).
+		Once()
+	req, w := prepareHttpTest(http.MethodDelete, ledstripIDProfilePath, uv{"id": getStripIdStr}, nil)
+
+	mocks.lh.RemoveProfileForStrip(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 }
 
 func createValidDummyStrip() *model.LedStrip {
@@ -657,13 +439,15 @@ func createValidDummyStrip() *model.LedStrip {
 }
 
 func createLEDHandlerMocks(t *testing.T) *lhMocks {
-	bm := createBaseMocks(t)
+	i := do.New()
+	bm := createBaseMocks(i, t)
+	ls := servicemocks.NewLEDService(t)
+	do.ProvideValue[service.LEDService](i, ls)
+	lh, err := NewLEDHandler(i)
+	assert.NoError(t, err)
 	return &lhMocks{
 		baseMocks: bm,
-		lh: &LEDHandlerImpl{
-			dbh:   bm.lsDbh,
-			cpDbh: bm.cpDbh,
-			mh:    bm.mh,
-		},
+		lsvc:      ls,
+		lh:        lh.(*ledHandlerImpl),
 	}
 }

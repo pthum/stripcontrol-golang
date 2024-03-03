@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pthum/stripcontrol-golang/internal/config"
+	alog "github.com/pthum/stripcontrol-golang/internal/log"
 	"github.com/pthum/stripcontrol-golang/internal/model"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -21,6 +22,7 @@ type mqttHandler struct {
 	opts       *mqtt.ClientOptions
 	cfg        config.MessagingConfig
 	intialized bool
+	l          alog.Logger
 }
 
 // define a function for the default message handler
@@ -44,6 +46,7 @@ func NewMQTT(cfg config.MessagingConfig) *mqttHandler {
 	return &mqttHandler{
 		opts: buildClientOpts(cfg),
 		cfg:  cfg,
+		l:    alog.NewLogger("mqtt"),
 	}
 }
 
@@ -55,7 +58,7 @@ func (m *mqttHandler) getClient() mqtt.Client {
 			if token := m.mqclient.Connect(); token.Wait() && token.Error() != nil {
 				panic(token.Error())
 			}
-			log.Print("initialized messaging")
+			m.l.Info("initialized messaging")
 			m.intialized = true
 		})
 	}
@@ -80,9 +83,10 @@ func buildClientOpts(cfg config.MessagingConfig) *mqtt.ClientOptions {
 }
 
 // Close closes connections to message broker
-func (m *mqttHandler) Close() {
+func (m *mqttHandler) Shutdown() error {
 	m.mqclient.Disconnect(100)
-	log.Print("message broker connection gracefully closed")
+	m.l.Info("message broker connection gracefully closed")
+	return nil
 }
 
 // PublishStripEvent publishes a strip event
@@ -98,13 +102,13 @@ func (m *mqttHandler) PublishProfileEvent(event *model.ProfileEvent) error {
 func (m *mqttHandler) publish(topic string, event interface{}) (err error) {
 	data, err := json.Marshal(event)
 	if err != nil {
-		log.Printf("Error %s", err.Error())
+		m.l.Error("Error %s", err.Error())
 		return
 	}
-	log.Printf("sending to topic %s event: %s", topic, string(data))
+	m.l.Info("sending to topic %s event: %s", topic, string(data))
 	token := m.getClient().Publish(topic, 0, false, data)
 	if token.Wait() && token.Error() != nil {
-		log.Printf("error: %s", token.Error().Error())
+		m.l.Error("error: %s", token.Error().Error())
 		err = errors.New("failed to send message")
 	}
 	return

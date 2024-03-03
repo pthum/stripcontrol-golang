@@ -10,45 +10,16 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/pthum/stripcontrol-golang/internal/database"
 	dbm "github.com/pthum/stripcontrol-golang/internal/database/mocks"
+	"github.com/pthum/stripcontrol-golang/internal/messaging"
 	mhm "github.com/pthum/stripcontrol-golang/internal/messaging/mocks"
 	"github.com/pthum/stripcontrol-golang/internal/model"
+	"github.com/pthum/stripcontrol-golang/internal/service"
+	"github.com/samber/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-type getTest[T any] struct {
-	name           string
-	returnError    error
-	returnObj      *T
-	expectedStatus int
-}
-
-type createTest[T any] struct {
-	name           string
-	returnError    error
-	body           *T
-	publishError   error
-	expectedStatus int
-}
-
-type deleteTest[T any] struct {
-	name           string
-	getObj         *T
-	getError       error
-	deleteError    error
-	publishError   error
-	expectedStatus int
-}
-
-type updateTest[T any] struct {
-	name           string
-	body           *T
-	getError       error
-	updateError    error
-	publishError   error
-	expectedStatus int
-}
 
 type uv map[string]string
 
@@ -59,15 +30,21 @@ type baseMocks struct {
 }
 
 func TestRouteHandlerName(t *testing.T) {
-	tmp := (&LEDHandlerImpl{}).GetAllLedStrips
+	tmp := (&ledHandlerImpl{}).GetAllLedStrips
 	r := &Route{"GET", "/", tmp}
 	assert.Equal(t, "GetAllLedStrips", r.HandlerName())
 }
 
-func createBaseMocks(t *testing.T) *baseMocks {
+func createBaseMocks(i *do.Injector, t *testing.T) *baseMocks {
 	cpDbh := dbm.NewDBHandler[model.ColorProfile](t)
 	lsDbh := dbm.NewDBHandler[model.LedStrip](t)
+	do.ProvideValue[database.DBHandler[model.ColorProfile]](i, cpDbh)
+	do.ProvideValue[database.DBHandler[model.LedStrip]](i, lsDbh)
 	mh := mhm.NewEventHandler(t)
+	do.ProvideValue[messaging.EventHandler](i, mh)
+	cps, err := service.NewCPService(i)
+	assert.NoError(t, err)
+	do.ProvideValue(i, cps)
 	return &baseMocks{
 		cpDbh: cpDbh,
 		lsDbh: lsDbh,
