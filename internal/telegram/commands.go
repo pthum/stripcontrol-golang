@@ -73,7 +73,11 @@ func (c *cmdHandler) actionGetAll(inp *tgbotapi.Message) string {
 	}
 	msg := "All LED Strips: \n"
 	for _, s := range strips {
-		msg += fmt.Sprintf("ID: %s - '%s'\n", s.GetStringID(), s.Name)
+		state := "Off"
+		if s.Enabled {
+			state = "On"
+		}
+		msg += fmt.Sprintf("ID: %s - '%s (%s)'\n", s.GetStringID(), s.Name, state)
 	}
 	return msg
 }
