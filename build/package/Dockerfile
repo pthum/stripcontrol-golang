@@ -6,11 +6,13 @@ RUN apk add --no-cache git
 WORKDIR /tmp/stripcontrol-app
 
 # We want to populate the module cache based on the go.{mod,sum} files.
-COPY go.mod .
+COPY ["go.mod", "go.sum", "./" ]
 
-RUN go mod download && go mod tidy
+RUN go mod download
 
 COPY . .
+
+RUN go mod tidy
 
 FROM build_base AS test
 # switch to head instead of latest release due to https://github.com/jstemmer/go-junit-report/issues/138
